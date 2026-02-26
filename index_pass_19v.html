@@ -216,7 +216,7 @@
         /* Коли PC sidebar розгорнутий — bulk sidebar = 300px = PC sidebar, зсув не потрібен */
         .pc-sidebar:not(.collapsed-sidebar) ~ .main-content-area.shifted-by-bulk { margin-left: 0; }
         @media (max-width: 1099px) {
-            .main-content-area.shifted-by-bulk { margin-left: 0; margin-right: 180px; }
+            .main-content-area.shifted-by-bulk { margin-left: 0; margin-right: 0; }
         }
 
         /* DASHBOARD - Owner Only */
@@ -1105,46 +1105,94 @@
         
         /* Mobile styles */
         @media (max-width: 1099px) {
-            /* Bulk actions sidebar - ЗЛІВА на мобільному (як основне меню) */
-            .bulk-actions-bar { display: none !important; }
-            .bulk-actions-sidebar {
-                display: none;
+            /* Mobile: bulk sidebar ЗАХОВАНО, використовуємо bulk-actions-bar */
+            .bulk-actions-sidebar { display: none !important; }
+            .bulk-overlay { display: none !important; }
+
+            /* Mobile bulk action bar — компактна панель внизу */
+            .bulk-actions-bar {
                 position: fixed;
-                top: 0;
+                bottom: 58px;
                 left: 0;
-                right: auto;
-                bottom: 0;
-                width: 240px;
-                transform: translateX(-100%);
+                right: 0;
+                background: linear-gradient(135deg, #7f1d1d 0%, #5b1010 100%);
+                z-index: 150;
+                display: none;
+                flex-direction: column;
+                box-shadow: 0 -4px 20px rgba(0,0,0,0.25);
+                border-radius: 16px 16px 0 0;
+                padding: 0;
+                transform: translateY(100%);
                 transition: transform 0.3s ease;
-                box-shadow: 4px 0 24px rgba(0,0,0,0.35);
-                z-index: 202;
-                border-radius: 0 14px 14px 0;
             }
-            .bulk-actions-sidebar.show {
+            .bulk-actions-bar.show {
                 display: flex;
-                transform: translateX(0);
+                transform: translateY(0);
             }
-            .bulk-sidebar-header {
-                padding: 16px;
-                background: rgba(0,0,0,0.15);
-                border-bottom: 1px solid rgba(255,255,255,0.1);
+            .bulk-actions-content {
+                display: flex;
+                flex-direction: column;
+                gap: 0;
             }
-            .bulk-sidebar-title { font-size: 15px; letter-spacing: 0.5px; }
-            .bulk-sidebar-count { font-size: 12px; padding: 4px 10px; }
-            .bulk-sidebar-actions { padding: 10px; gap: 4px; }
-            .bulk-sidebar-btn {
-                padding: 12px 14px;
+            /* Верхній рядок: кількість + кнопка закрити */
+            .bulk-bar-header {
+                display: flex;
+                align-items: center;
+                justify-content: space-between;
+                padding: 10px 14px 6px;
+            }
+            .bulk-selected {
+                color: rgba(255,255,255,0.95);
                 font-size: 13px;
-                border-radius: 8px;
+                font-weight: 600;
             }
-            .bulk-sidebar-btn .btn-icon { font-size: 16px; }
-            .bulk-sidebar-divider { margin: 8px 0; }
-            .bulk-sidebar-menu-btn { display: none; }
-            .bulk-sidebar-close { padding: 10px; }
-            .bulk-sidebar-close-btn { padding: 12px; font-size: 13px; border-radius: 8px; }
-            .bulk-sidebar-more-toggle { padding: 10px 14px; font-size: 12px; border-radius: 8px; }
-            .bulk-sidebar-secondary .bulk-sidebar-btn { padding: 10px 14px; font-size: 12px; }
+            .bulk-bar-close {
+                background: rgba(255,255,255,0.15);
+                border: none;
+                color: white;
+                width: 28px;
+                height: 28px;
+                border-radius: 50%;
+                font-size: 14px;
+                cursor: pointer;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+            }
+            /* Кнопки дій — горизонтальна прокрутка */
+            .bulk-buttons {
+                display: flex;
+                gap: 6px;
+                padding: 6px 14px 12px;
+                overflow-x: auto;
+                -webkit-overflow-scrolling: touch;
+                scrollbar-width: none;
+            }
+            .bulk-buttons::-webkit-scrollbar { display: none; }
+            .bulk-btn {
+                flex-shrink: 0;
+                padding: 8px 12px;
+                border: none;
+                border-radius: 10px;
+                background: rgba(255,255,255,0.15);
+                color: white;
+                font-size: 13px;
+                font-weight: 500;
+                cursor: pointer;
+                display: flex;
+                align-items: center;
+                gap: 4px;
+                white-space: nowrap;
+                transition: background 0.2s;
+            }
+            .bulk-btn:active { background: rgba(255,255,255,0.3); }
+            .bulk-btn.select-all { background: rgba(255,255,255,0.2); }
+            .bulk-btn.cancel {
+                background: rgba(255,255,255,0.1);
+                border: 1px solid rgba(255,255,255,0.25);
+                font-size: 16px;
+                padding: 8px 10px;
+            }
         }
 
         /* VEHICLE BADGE ON CARD */
@@ -1825,17 +1873,19 @@
 <!-- BULK ACTIONS BAR - Mobile версія -->
 <div class="bulk-actions-bar" id="bulkActionsBar">
     <div class="bulk-actions-content">
-        <span class="bulk-selected">Вибрано: <span id="bulkCount">0</span></span>
+        <div class="bulk-bar-header">
+            <span class="bulk-selected">Вибрано: <span id="bulkCount">0</span></span>
+            <button class="bulk-bar-close" onclick="clearSelection()">✕</button>
+        </div>
         <div class="bulk-buttons">
             <button class="bulk-btn select-all" onclick="selectAllVisible()">☑️ Всі</button>
             <button class="bulk-btn vehicle" onclick="openBulkVehicleModal()">🚐 Авто</button>
-            <button class="bulk-btn optimize" onclick="bulkOptimize()">⚡</button>
-            <button class="bulk-btn route" onclick="bulkMoveToRoute()">🚀</button>
-            <button class="bulk-btn" onclick="openTagModal()" style="background:#7c3aed;color:white;">🏷️</button>
-            <button class="bulk-btn notify" id="btnBulkNotify" onclick="bulkMarkNotified()" style="display:none;background:#f97316;">🔔</button>
-            <button class="bulk-btn archive" id="btnBulkArchive" onclick="bulkArchive()">📦</button>
-            <button class="bulk-btn restore" id="btnBulkRestore" onclick="bulkRestore()" style="display:none;background:var(--success);">↩️</button>
-            <button class="bulk-btn cancel" onclick="clearSelection()">✕</button>
+            <button class="bulk-btn optimize" onclick="bulkOptimize()">⚡ Опт</button>
+            <button class="bulk-btn route" onclick="bulkMoveToRoute()">🚀 Маршрут</button>
+            <button class="bulk-btn" onclick="openTagModal()" style="background:rgba(139,92,246,0.4);">🏷️ Тег</button>
+            <button class="bulk-btn notify" id="btnBulkNotify" onclick="bulkMarkNotified()" style="display:none;background:rgba(249,115,22,0.5);">🔔</button>
+            <button class="bulk-btn archive" id="btnBulkArchive" onclick="bulkArchive()">📦 Архів</button>
+            <button class="bulk-btn restore" id="btnBulkRestore" onclick="bulkRestore()" style="display:none;background:rgba(34,197,94,0.4);">↩️</button>
         </div>
     </div>
 </div>
@@ -3102,32 +3152,34 @@ function updateBulkBar() {
     const bar = document.getElementById('bulkActionsBar');
     const sidebar = document.getElementById('bulkActionsSidebar');
     const count = selectedIds.size;
-    
+    const isMobile = window.innerWidth < 1100;
+
     // Оновлюємо лічильники
     document.getElementById('bulkCount').textContent = count;
     const sidebarCount = document.getElementById('bulkCountSidebar');
     if (sidebarCount) sidebarCount.textContent = count;
-    
+
     // Mobile bar - показуємо/ховаємо
     bar.classList.toggle('show', count > 0);
-    
-    // Sidebar - тільки ПОКАЗУЄМО, не ховаємо (ховає clearSelection)
-    if (sidebar && count > 0) sidebar.classList.add('show');
-    // Overlay (mobile)
-    const overlay = document.getElementById('bulkOverlay');
-    if (overlay && count > 0) overlay.classList.add('show');
 
-    // Ховаємо collapse btn коли bulk sidebar відкритий
+    // PC: sidebar + overlay
+    if (!isMobile) {
+        if (sidebar && count > 0) sidebar.classList.add('show');
+        const overlay = document.getElementById('bulkOverlay');
+        if (overlay && count > 0) overlay.classList.add('show');
+    }
+
+    // Ховаємо collapse btn коли bulk sidebar відкритий (тільки PC)
     const collapseBtn = document.getElementById('pcSidebarCollapseBtn');
-    if (collapseBtn) collapseBtn.style.display = count > 0 ? 'none' : '';
+    if (collapseBtn && !isMobile) collapseBtn.style.display = count > 0 ? 'none' : '';
 
-    // Зсув контенту коли bulk sidebar відкритий
+    // Зсув контенту (тільки PC)
     const contentArea = document.querySelector('.main-content-area');
-    if (contentArea) contentArea.classList.toggle('shifted-by-bulk', count > 0);
+    if (contentArea && !isMobile) contentArea.classList.toggle('shifted-by-bulk', count > 0);
 
-    // Ховаємо bottom-nav коли bulk sidebar відкритий
+    // Ховаємо bottom-nav (тільки PC — на мобільному залишаємо)
     const bottomNav = document.querySelector('.bottom-nav');
-    if (bottomNav) {
+    if (bottomNav && !isMobile) {
         bottomNav.classList.toggle('hidden-by-bulk', count > 0);
         bottomNav.style.display = count > 0 ? 'none' : '';
     }
