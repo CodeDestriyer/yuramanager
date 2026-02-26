@@ -1048,7 +1048,7 @@
                 <span class="section-toggle" id="toggleDirection">▼</span>
             </div>
             <div class="side-menu-collapsible" id="mobileDirectionSection">
-                <div class="side-menu-item" id="mobileNewLeads" onclick="showNewLeads(); closeSideMenu();" style="background:rgba(0,0,0,0.4);">
+                <div class="side-menu-item" id="mobileNewLeads" onclick="showNewLeads(); closeSideMenu();" style="background:rgba(59,130,246,0.25);">
                     <span class="side-menu-item-left" style="color:white;font-weight:700;">🆕 Нові (24 год)</span>
                     <span class="side-menu-item-count" id="mobileCountNew" style="background:var(--accent);color:white;">0</span>
                 </div>
@@ -1166,8 +1166,8 @@
                 <span class="pc-sidebar-toggle" id="pcToggleDirection">▼</span>
             </div>
             <div class="pc-sidebar-content" id="pcSectionDirection">
-                <div class="pc-sidebar-item" id="pcNewLeads" onclick="showNewLeads()" style="color:#000000;">
-                    <span style="color:#000000;"><span class="item-icon">🆕</span>Нові (24 год)</span>
+                <div class="pc-sidebar-item" id="pcNewLeads" onclick="showNewLeads()" style="background:rgba(59,130,246,0.08);color:var(--primary);">
+                    <span><span class="item-icon">🆕</span>Нові (24 год)</span>
                     <span class="item-count" id="pcCountNew" style="background:var(--accent);color:white;">0</span>
                 </div>
                 <div class="pc-sidebar-item" id="pcDirectionAll" onclick="setDirection('all')">
@@ -1566,7 +1566,7 @@
         </div>
         <div class="modal-footer">
             <button class="btn-cancel" onclick="closeModal('bulkVehicleModal')">Скасувати</button>
-            <button class="btn-save" id="bulkVehicleConfirmBtn" onclick="confirmBulkAssignVehicle()" style="display:none;">🚐 Призначити</button>
+            <button class="btn-save" id="bulkVehicleConfirmBtn" onclick="confirmBulkAssignVehicle()" disabled style="opacity:0.5;">🚐 Призначити</button>
         </div>
     </div>
 </div>
@@ -1759,6 +1759,20 @@
 </div>
 
 <div class="toast" id="toast"></div>
+
+<script>
+// Google Maps API init callback
+window.mapsApiReady = false;
+window.mapsGeocoder = null;
+window.mapsDirections = null;
+function initMapsAPI() {
+    window.mapsApiReady = true;
+    window.mapsGeocoder = new google.maps.Geocoder();
+    window.mapsDirections = new google.maps.DirectionsService();
+    console.log('✅ Google Maps API ready');
+}
+</script>
+<script async defer src="https://maps.googleapis.com/maps/api/js?key=AIzaSyCthPzhD6zDM9zR-re0R2ceohyhCRdawNc&callback=initMapsAPI"></script>
 
 <script>
 const ALL_COLUMNS = {
@@ -2293,7 +2307,7 @@ function showCapacityWarning(date, seats, capacity) {
             </div>
             <div class="modal-footer">
                 <button class="btn-secondary" onclick="document.getElementById('capacityWarningModal').remove()">Зрозуміло</button>
-                <button class="btn-save" onclick="document.getElementById('capacityWarningModal').remove();openVehicleModal()">➕ Додати авто</button>
+                <button class="btn-save" onclick="document.getElementById('capacityWarningModal').remove();openAddVehicleModal()">➕ Додати авто</button>
             </div>
         </div>
     `;
@@ -3538,9 +3552,11 @@ function openBulkVehicleModal() {
     selectedBulkVehicleId = null;
     document.getElementById('bulkVehicleCount').textContent = selectedIds.size;
     document.getElementById('bulkVehicleList').innerHTML = vehicles.map(v =>
-        `<div class="vehicle-select-item" id="vsi_${v.id}" onclick="selectBulkVehicle('${v.id}')"><span class="vehicle-select-name">🚐 ${v.name}</span><span class="vehicle-select-info">${v.seats} місць</span></div>`
+        `<div class="vehicle-select-item" id="vsi_${v.id}" onclick="selectBulkVehicle('${v.id}')" style="cursor:pointer;border:2px solid transparent;transition:all 0.2s;"><span class="vehicle-select-name">🚐 ${v.name}</span><span class="vehicle-select-info">${v.seats} місць</span></div>`
     ).join('');
-    document.getElementById('bulkVehicleConfirmBtn').style.display = 'none';
+    const confirmBtn = document.getElementById('bulkVehicleConfirmBtn');
+    confirmBtn.disabled = true;
+    confirmBtn.style.opacity = '0.5';
     document.getElementById('bulkVehicleModal').classList.add('show');
 }
 
@@ -3548,16 +3564,18 @@ function selectBulkVehicle(vehicleId) {
     selectedBulkVehicleId = vehicleId;
     // Підсвічуємо вибране авто
     document.querySelectorAll('#bulkVehicleList .vehicle-select-item').forEach(el => {
-        el.style.borderColor = '';
+        el.style.borderColor = 'transparent';
         el.style.background = '';
     });
-    const selected = document.getElementById('vsi_' + vehicleId);
-    if (selected) {
-        selected.style.borderColor = 'var(--info)';
-        selected.style.background = '#f0f7ff';
+    const selectedEl = document.getElementById('vsi_' + vehicleId);
+    if (selectedEl) {
+        selectedEl.style.borderColor = 'var(--info)';
+        selectedEl.style.background = '#f0f7ff';
     }
-    // Показуємо кнопку підтвердження
-    document.getElementById('bulkVehicleConfirmBtn').style.display = 'inline-block';
+    // Активуємо кнопку підтвердження
+    const confirmBtn = document.getElementById('bulkVehicleConfirmBtn');
+    confirmBtn.disabled = false;
+    confirmBtn.style.opacity = '1';
 }
 
 function confirmBulkAssignVehicle() {
@@ -3566,12 +3584,14 @@ function confirmBulkAssignVehicle() {
 }
 
 function bulkAssignVehicle(vehicleId) {
-    saveForUndo('vehicle');
+    const veh = vehicles.find(v => v.id === vehicleId);
+    if (!veh) return showToast('❌ Авто не знайдено');
+
     let count = 0;
     selectedIds.forEach(uid => {
         const p = findPassengerByUid(uid);
         if (p && p.status !== 'archived') {
-            p.vehicle = vehicleId;
+            p.vehicle = veh.name;
             if (p.status === 'new') p.status = 'work';
             // Оновлюємо на сервері
             updatePassengerOnServer(p);
@@ -3583,7 +3603,8 @@ function bulkAssignVehicle(vehicleId) {
     clearSelection();
     render();
     updateAllCounts();
-    showToast(`🚐 Авто призначено: ${count}`);
+    updateVehiclesList();
+    showToast(`🚐 ${veh.name} призначено: ${count}`);
 }
 
 function bulkMoveToRoute() {
@@ -4112,84 +4133,295 @@ function selectOptimizeBy(by) {
     document.getElementById('optTo').classList.toggle('selected', by === 'to');
 }
 
-function startOptimization() {
+// ============================================
+// КЛІЄНТСЬКА ОПТИМІЗАЦІЯ (Google Maps JS API)
+// ============================================
+const OPTIMIZE_MAX_WAYPOINTS = 23; // Ліміт Google Directions API
+
+function sleep(ms) { return new Promise(r => setTimeout(r, ms)); }
+
+// Геокодування однієї адреси через Google Maps JS API
+function geocodeClient(address) {
+    return new Promise(resolve => {
+        if (!window.mapsGeocoder) return resolve(null);
+        window.mapsGeocoder.geocode({ address: address }, (results, status) => {
+            if (status === 'OK' && results && results[0]) {
+                resolve({
+                    lat: results[0].geometry.location.lat(),
+                    lng: results[0].geometry.location.lng()
+                });
+            } else {
+                console.warn('Geocode failed:', address, '→', status);
+                resolve(null);
+            }
+        });
+    });
+}
+
+// Оптимізація через Google Directions API (реальні дороги)
+function optimizeDirectionsClient(geocodedPassengers, startCoords, endCoords) {
+    return new Promise((resolve, reject) => {
+        if (!window.mapsDirections) return reject(new Error('Maps API not ready'));
+
+        const waypoints = geocodedPassengers.map(p => ({
+            location: new google.maps.LatLng(p.coords.lat, p.coords.lng),
+            stopover: true
+        }));
+
+        const origin = new google.maps.LatLng(startCoords.lat, startCoords.lng);
+        let destination, routeWaypoints;
+
+        if (endCoords) {
+            destination = new google.maps.LatLng(endCoords.lat, endCoords.lng);
+            routeWaypoints = waypoints;
+        } else {
+            destination = waypoints[waypoints.length - 1].location;
+            routeWaypoints = waypoints.slice(0, -1);
+        }
+
+        window.mapsDirections.route({
+            origin: origin,
+            destination: destination,
+            waypoints: routeWaypoints,
+            optimizeWaypoints: true,
+            travelMode: google.maps.TravelMode.DRIVING
+        }, (response, status) => {
+            if (status === 'OK') {
+                const order = response.routes[0].waypoint_order;
+                if (endCoords) {
+                    resolve(order);
+                } else {
+                    const result = order.slice();
+                    result.push(geocodedPassengers.length - 1);
+                    resolve(result);
+                }
+            } else {
+                reject(new Error('Directions API: ' + status));
+            }
+        });
+    });
+}
+
+// Fallback: Nearest Neighbor (по прямій)
+function nearestNeighborClient(geocodedPassengers, startCoords) {
+    const n = geocodedPassengers.length;
+    if (n === 0) return [];
+    if (n === 1) return [0];
+
+    function haversine(c1, c2) {
+        const R = 6371;
+        const dLat = (c2.lat - c1.lat) * Math.PI / 180;
+        const dLng = (c2.lng - c1.lng) * Math.PI / 180;
+        const a = Math.sin(dLat/2)**2 + Math.cos(c1.lat*Math.PI/180) * Math.cos(c2.lat*Math.PI/180) * Math.sin(dLng/2)**2;
+        return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+    }
+
+    // Знаходимо найближчу до старту
+    let currentIdx = 0;
+    let minDist = Infinity;
+    for (let i = 0; i < n; i++) {
+        const d = haversine(startCoords, geocodedPassengers[i].coords);
+        if (d < minDist) { minDist = d; currentIdx = i; }
+    }
+
+    const visited = Array(n).fill(false);
+    const tour = [currentIdx];
+    visited[currentIdx] = true;
+
+    for (let step = 1; step < n; step++) {
+        let nearest = -1, nearDist = Infinity;
+        for (let j = 0; j < n; j++) {
+            if (!visited[j]) {
+                const d = haversine(geocodedPassengers[currentIdx].coords, geocodedPassengers[j].coords);
+                if (d < nearDist) { nearDist = d; nearest = j; }
+            }
+        }
+        if (nearest === -1) break;
+        tour.push(nearest);
+        visited[nearest] = true;
+        currentIdx = nearest;
+    }
+    return tour;
+}
+
+// Генерація посилань на Google Maps
+function generateOptimizeMapLinks(orderedPassengers, startAddr, endAddr) {
+    const MAX_PER_MAP = 25;
+    const links = [];
+    const total = orderedPassengers.length;
+    if (total === 0) return links;
+
+    const perChunk = MAX_PER_MAP - 1;
+    let chunkStart = 0;
+
+    while (chunkStart < total) {
+        const chunkEnd = Math.min(chunkStart + perChunk, total);
+        const chunk = orderedPassengers.slice(chunkStart, chunkEnd);
+
+        const origin = chunkStart === 0
+            ? (startAddr || 'Ужгород')
+            : orderedPassengers[chunkStart - 1].address;
+
+        let destination, waypointItems;
+        if (chunkEnd >= total && endAddr) {
+            destination = endAddr;
+            waypointItems = chunk;
+        } else {
+            destination = chunk[chunk.length - 1].address;
+            waypointItems = chunk.slice(0, -1);
+        }
+
+        let url = 'https://www.google.com/maps/dir/' + encodeURIComponent(origin);
+        waypointItems.forEach(p => { url += '/' + encodeURIComponent(p.address); });
+        url += '/' + encodeURIComponent(destination);
+
+        links.push({ url, from: chunkStart + 1, to: chunkEnd, total });
+        chunkStart = chunkEnd;
+    }
+    return links;
+}
+
+// ГОЛОВНА ФУНКЦІЯ ОПТИМІЗАЦІЇ (клієнтська)
+async function startOptimization() {
     if (!optimizePassengersList.length) return;
-    
-    // Показуємо завантаження
-    document.getElementById('optimizeFormBody').style.display = 'none';
-    document.getElementById('optimizeLoadingBody').style.display = 'block';
-    document.getElementById('optimizeFormFooter').style.display = 'none';
-    
-    const startAddress = document.getElementById('optimizeStart').value.trim();
-    const endAddress = document.getElementById('optimizeEnd').value.trim();
-    
-    // Чистимо дані - відправляємо тільки потрібні поля з явними адресами
-    const passengersWithUid = optimizePassengersList.map(p => ({
-        id: p.id || '',
-        name: p.name || '',
-        phone: p.phone || '',
-        from: p.from || '',
-        to: p.to || '',
-        seats: p.seats || 1,
-        payment: p.payment || '',
-        direction: p.direction || '',
-        date: p.date || '',
-        vehicle: p.vehicle || '',
-        _uid: (p._sheet && p._rowNum) ? `${p._sheet}_${p._rowNum}` : null,
-        _sheet: p._sheet || '',
-        _rowNum: p._rowNum || ''
-    }));
-
-    // Перевіряємо чи є адреси для оптимізації
-    const addressField = optimizeBy === 'from' ? 'from' : 'to';
-    const withAddress = passengersWithUid.filter(p => p[addressField] && p[addressField].trim());
-    const withoutAddress = passengersWithUid.filter(p => !p[addressField] || !p[addressField].trim());
-
-    if (withAddress.length === 0) {
-        document.getElementById('optimizeFormBody').style.display = 'block';
-        document.getElementById('optimizeLoadingBody').style.display = 'none';
-        document.getElementById('optimizeFormFooter').style.display = 'flex';
-        showToast(`❌ Жоден лід не має адреси (поле "${addressField === 'from' ? 'Звідки' : 'Куди'}")`);
+    if (!window.mapsApiReady) {
+        showToast('⏳ Google Maps API ще завантажується, зачекайте...');
         return;
     }
 
-    if (withoutAddress.length > 0) {
-        showToast(`⚠️ ${withoutAddress.length} лідів без адреси - будуть пропущені`);
-    }
+    // UI → loading
+    document.getElementById('optimizeFormBody').style.display = 'none';
+    document.getElementById('optimizeLoadingBody').style.display = 'block';
+    document.getElementById('optimizeFormFooter').style.display = 'none';
 
-    const payload = {
-        action: 'optimize',
-        payload: {
-            passengers: passengersWithUid,
-            optimizeBy: optimizeBy,
-            startAddress: startAddress,
-            endAddress: endAddress
+    const startAddress = document.getElementById('optimizeStart').value.trim() || 'Ужгород';
+    const endAddress = document.getElementById('optimizeEnd').value.trim();
+    const optimizeLabel = optimizeBy === 'from' ? 'Адреса ВІДПРАВКИ' : 'Адреса ПРИБУТТЯ';
+
+    try {
+        // 1. Збираємо пасажирів з адресами
+        const allPassengers = optimizePassengersList.map(p => ({
+            id: p.id || '',
+            name: p.name || '',
+            phone: p.phone || '',
+            from: p.from || '',
+            to: p.to || '',
+            seats: p.seats || 1,
+            date: p.date || '',
+            payment: p.payment || '',
+            direction: p.direction || '',
+            vehicle: p.vehicle || '',
+            address: (optimizeBy === 'from' ? p.from : p.to) || '',
+            coords: null,
+            _uid: (p._sheet && p._rowNum) ? `${p._sheet}_${p._rowNum}` : null,
+            _sheet: p._sheet,
+            _rowNum: p._rowNum
+        }));
+
+        const withAddress = allPassengers.filter(p => p.address && p.address.trim());
+        const withoutAddress = allPassengers.filter(p => !p.address || !p.address.trim());
+
+        if (withAddress.length === 0) {
+            throw new Error(`Жоден лід не має адреси (поле "${optimizeBy === 'from' ? 'Звідки' : 'Куди'}")`);
         }
-    };
-    
-    fetch(API_URL, {
-        method: 'POST',
-        headers: { 'Content-Type': 'text/plain' },
-        body: JSON.stringify(payload)
-    })
-    .then(r => r.json())
-    .then(data => {
-        if (data.success) {
-            showOptimizationResult(data);
-        } else {
-            document.getElementById('optimizeFormBody').style.display = 'block';
-            document.getElementById('optimizeLoadingBody').style.display = 'none';
-            document.getElementById('optimizeFormFooter').style.display = 'flex';
-            showToast('❌ ' + data.error);
+
+        // 2. Геокодуємо всі адреси
+        updateLoader('Геокодування адрес...', `0 / ${withAddress.length}`);
+        const geocoded = [];
+        const notGeocodedList = [];
+
+        for (let i = 0; i < withAddress.length; i++) {
+            updateLoader(`📍 ${withAddress[i].address}`, `${i + 1} / ${withAddress.length}`);
+
+            const coords = await geocodeClient(withAddress[i].address);
+            if (coords) {
+                withAddress[i].coords = coords;
+                geocoded.push(withAddress[i]);
+            } else {
+                notGeocodedList.push({
+                    id: withAddress[i].id,
+                    name: withAddress[i].name,
+                    address: withAddress[i].address,
+                    uid: withAddress[i]._uid
+                });
+            }
+
+            // Rate limit
+            if (i < withAddress.length - 1) await sleep(150);
         }
-    })
-    .catch(err => {
+
+        if (geocoded.length === 0) {
+            throw new Error('Жодну адресу не вдалось геокодувати! Перевірте адреси пасажирів.');
+        }
+
+        // 3. Геокодуємо старт та фініш
+        updateLoader('📍 Геокодування старту...', '');
+        const startCoords = await geocodeClient(startAddress) || { lat: 48.6209, lng: 22.2879 };
+        let endCoords = null;
+        if (endAddress) {
+            updateLoader('📍 Геокодування фінішу...', '');
+            endCoords = await geocodeClient(endAddress);
+        }
+
+        // 4. Оптимізація маршруту
+        updateLoader('🗺️ Оптимізація маршруту...', `${geocoded.length} точок`);
+        let optimizedOrder = null;
+        let method = '';
+
+        if (geocoded.length <= OPTIMIZE_MAX_WAYPOINTS) {
+            try {
+                optimizedOrder = await optimizeDirectionsClient(geocoded, startCoords, endCoords);
+                method = 'Google Directions API (реальні дороги)';
+            } catch(e) {
+                console.warn('Directions API fallback:', e.message);
+            }
+        }
+
+        if (!optimizedOrder || optimizedOrder.length === 0) {
+            optimizedOrder = nearestNeighborClient(geocoded, startCoords);
+            method = 'Nearest Neighbor (по прямій)';
+        }
+
+        // 5. Формуємо результат
+        const orderedPassengers = optimizedOrder.map(idx => geocoded[idx]);
+        const mapLinks = generateOptimizeMapLinks(orderedPassengers, startAddress, endAddress);
+
+        console.log('✅ Optimization done:', {
+            total: withAddress.length,
+            geocoded: geocoded.length,
+            optimized: orderedPassengers.length,
+            method,
+            notGeocoded: notGeocodedList.length
+        });
+
+        // 6. Показуємо результат
+        document.getElementById('optimizeLoadingBody').style.display = 'none';
+        showOptimizationResult({
+            success: true,
+            optimizeBy: optimizeLabel,
+            start: startAddress,
+            end: endAddress || '(остання точка)',
+            stats: {
+                total: withAddress.length,
+                geocoded: geocoded.length,
+                optimized: orderedPassengers.length
+            },
+            method: method,
+            mapLinks: mapLinks,
+            orderedPassengers: orderedPassengers,
+            notGeocodedList: notGeocodedList
+        });
+
+        // 7. Оновлюємо порядок в CRM
+        applyOptimizedOrder(orderedPassengers, notGeocodedList);
+
+    } catch(err) {
         console.error('Optimize error:', err);
         document.getElementById('optimizeFormBody').style.display = 'block';
         document.getElementById('optimizeLoadingBody').style.display = 'none';
         document.getElementById('optimizeFormFooter').style.display = 'flex';
-        showToast('❌ Помилка зв\'язку');
-    });
+        showToast('❌ ' + err.message);
+    }
 }
 
 function showOptimizationResult(data) {
@@ -4292,21 +4524,66 @@ function applyOptimizedOrder(orderedPassengers, notGeocodedList) {
     updateAllCounts();
 }
 
+// Закрити панель оптимізації
+function closeOptimization() {
+    document.getElementById('optimizationPanel')?.classList.remove('show');
+}
+
+// Відкрити Google Maps з оптимізованими точками
+function openGoogleMaps() {
+    const optimized = passengers.filter(p => p.status === 'optimize').sort((a, b) => (a.order || 0) - (b.order || 0));
+    if (!optimized.length) return showToast('⚠️ Немає оптимізованих заявок');
+
+    // Будуємо URL маршруту через waypoints
+    const addresses = optimized.map(p => optimizeBy === 'from' ? p.from : p.to).filter(Boolean);
+    if (addresses.length === 0) return showToast('❌ Немає адрес');
+
+    const origin = encodeURIComponent(addresses[0]);
+    const destination = encodeURIComponent(addresses[addresses.length - 1]);
+    const waypoints = addresses.slice(1, -1).map(a => encodeURIComponent(a)).join('|');
+
+    let url = `https://www.google.com/maps/dir/?api=1&origin=${origin}&destination=${destination}`;
+    if (waypoints) url += `&waypoints=${waypoints}`;
+
+    window.open(url, '_blank');
+}
+
+// Підтвердити оптимізацію → перевести в маршрут
+function confirmOptimization() {
+    const optimized = passengers.filter(p => p.status === 'optimize');
+    if (!optimized.length) return showToast('⚠️ Немає оптимізованих заявок');
+
+    // Виділяємо їх та переводимо в маршрут
+    selectedIds.clear();
+    optimized.forEach(p => {
+        const uid = (p._sheet && p._rowNum) ? `${p._sheet}_${p._rowNum}` : null;
+        if (uid) selectedIds.add(uid);
+    });
+
+    if (selectedIds.size > 0) {
+        bulkMoveToRoute();
+    } else {
+        showToast('⚠️ Синхронізуй дані перед маршрутом');
+    }
+    closeOptimization();
+}
+
 // UNDO SYSTEM
 function saveForUndo(action) {
     // Зберігаємо копію стану вибраних пасажирів
-    const snapshot = [...selectedIds].map(id => {
-        const p = passengers.find(x => x.id === id);
+    const snapshot = [...selectedIds].map(uid => {
+        const p = findPassengerByUid(uid);
         return p ? { ...p } : null;
     }).filter(Boolean);
-    
+
     undoHistory.push({ action, snapshot, timestamp: Date.now() });
-    
+
     // Максимум 10 дій в історії
     if (undoHistory.length > 10) undoHistory.shift();
-    
-    // Показуємо кнопку undo
-    document.getElementById('btnUndo').style.display = 'flex';
+
+    // Показуємо кнопку undo (якщо є)
+    const btnUndo = document.getElementById('btnUndo');
+    if (btnUndo) btnUndo.style.display = 'flex';
 }
 
 function undoLastAction() {
@@ -4328,8 +4605,9 @@ function undoLastAction() {
     renderCalendars();
     
     // Ховаємо кнопку якщо історія пуста
-    if (!undoHistory.length) {
-        document.getElementById('btnUndo').style.display = 'none';
+    const btnUndoEl = document.getElementById('btnUndo');
+    if (!undoHistory.length && btnUndoEl) {
+        btnUndoEl.style.display = 'none';
     }
     
     showToast(`↩️ Відмінено: ${last.action}`);
