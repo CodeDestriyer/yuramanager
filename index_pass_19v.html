@@ -924,43 +924,49 @@
             opacity: 1;
         }
 
-        /* ROUTE PROGRESS */
-        .route-progress-bar {
+        /* ROUTE PROGRESS — centered overlay */
+        .route-progress-overlay {
             position: fixed;
-            top: 52px;
-            left: 0;
-            right: 0;
-            z-index: 1100;
+            top: 0; left: 0; right: 0; bottom: 0;
+            z-index: 1200;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: rgba(0,0,0,0.25);
+            backdrop-filter: blur(2px);
+        }
+        .route-progress-card {
+            background: white;
+            border-radius: 16px;
+            padding: 28px 36px;
+            box-shadow: 0 8px 32px rgba(0,0,0,0.18);
             display: flex;
             flex-direction: column;
             align-items: center;
+            gap: 16px;
+            min-width: 200px;
+            max-width: 280px;
+            animation: routeCardIn 0.3s ease;
         }
-        .route-progress-bar .bar {
-            width: 100%;
-            height: 4px;
-            background: linear-gradient(90deg, #3b82f6, #8b5cf6, #ec4899, #3b82f6);
-            background-size: 300% 100%;
-            animation: routeProgressShimmer 1.2s linear infinite;
+        @keyframes routeCardIn {
+            from { opacity: 0; transform: scale(0.9); }
+            to { opacity: 1; transform: scale(1); }
         }
-        .route-progress-bar .bar-label {
-            margin-top: 8px;
-            background: rgba(30,58,95,0.9);
-            backdrop-filter: blur(8px);
-            color: white;
-            padding: 6px 16px;
-            border-radius: 20px;
-            font-size: 11px;
+        .route-progress-spinner {
+            width: 40px; height: 40px;
+            border: 3px solid var(--border);
+            border-top-color: var(--primary);
+            border-radius: 50%;
+            animation: routeSpin 0.8s linear infinite;
+        }
+        @keyframes routeSpin {
+            to { transform: rotate(360deg); }
+        }
+        .route-progress-text {
+            font-size: 13px;
             font-weight: 600;
-            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
-            animation: routeLabelPulse 2s ease-in-out infinite;
-        }
-        @keyframes routeProgressShimmer {
-            0% { background-position: 300% 0; }
-            100% { background-position: -300% 0; }
-        }
-        @keyframes routeLabelPulse {
-            0%, 100% { opacity: 1; }
-            50% { opacity: 0.7; }
+            color: var(--primary);
+            text-align: center;
         }
         /* ROUTE CONFLICT MODAL - redesigned */
         .route-conflict-overlay {
@@ -1745,7 +1751,7 @@
     </div>
     <div class="bulk-sidebar-close">
         <button class="bulk-sidebar-close-btn" onclick="clearSelection()">
-            <span>✕</span> Скасувати вибір
+            <span>✕</span> Закрити
         </button>
     </div>
 </div>
@@ -2078,7 +2084,7 @@ const DEFAULT_VEHICLES = [
 let vehicles = DEFAULT_VEHICLES.map(v => ({...v}));
 
 // Список службових аркушів які НЕ є маршрутами
-const EXCLUDED_SHEETS = ['логи', 'розсилка', 'лог', 'logs', 'mailing'];
+const EXCLUDED_SHEETS = ['логи', 'розсилка', 'лог', 'logs', 'mailing', 'провірка'];
 
 function isRouteSheet(name) {
     return !EXCLUDED_SHEETS.some(ex => name.toLowerCase().includes(ex));
@@ -2934,31 +2940,20 @@ function findPassengerByUid(uid) {
 }
 
 // SELECTION & BULK ACTIONS
-function toggleDetails(uid) { 
+function toggleDetails(uid) {
     const p = findPassengerByUid(uid);
     if (p?.isNew) { p.isNew = false; saveSettings(); }
-    // Закриваємо дії інших карток
-    if (openActionsId) {
-        document.querySelector(`[data-uid="${openActionsId}"] .card-actions`)?.classList.remove('show');
-        document.querySelector(`[data-uid="${openActionsId}"] .card-actions-toggle`)?.classList.remove('open');
-        openActionsId = null;
-    }
     if (openDetailsId && openDetailsId !== uid) document.querySelector(`[data-uid="${openDetailsId}"] .card-details`)?.classList.remove('show');
     openDetailsId = openDetailsId === uid ? null : uid;
     document.querySelector(`[data-uid="${uid}"] .card-details`)?.classList.toggle('show', openDetailsId === uid);
     document.querySelector(`[data-uid="${uid}"] .new-tag`)?.remove();
 }
 
-function toggleActions(uid) { 
+function toggleActions(uid) {
     // Закриваємо дії інших карток
     if (openActionsId && openActionsId !== uid) {
         document.querySelector(`[data-uid="${openActionsId}"] .card-actions`)?.classList.remove('show');
         document.querySelector(`[data-uid="${openActionsId}"] .card-actions-toggle`)?.classList.remove('open');
-    }
-    // Закриваємо деталі інших карток
-    if (openDetailsId && openDetailsId !== uid) {
-        document.querySelector(`[data-uid="${openDetailsId}"] .card-details`)?.classList.remove('show');
-        openDetailsId = null;
     }
     openActionsId = openActionsId === uid ? null : uid;
     document.querySelector(`[data-uid="${uid}"] .card-actions`)?.classList.toggle('show', openActionsId === uid);
@@ -4051,26 +4046,26 @@ function toggleBulkSecondary() {
     }
 }
 
-// Route progress bar helpers
+// Route progress overlay helpers
 function showRouteProgress(text) {
-    let bar = document.getElementById('routeProgressBar');
-    if (!bar) {
-        bar = document.createElement('div');
-        bar.className = 'route-progress-bar';
-        bar.id = 'routeProgressBar';
-        bar.innerHTML = '<div class="bar"></div><div class="bar-label"></div>';
-        document.body.appendChild(bar);
+    let el = document.getElementById('routeProgressOverlay');
+    if (!el) {
+        el = document.createElement('div');
+        el.className = 'route-progress-overlay';
+        el.id = 'routeProgressOverlay';
+        el.innerHTML = '<div class="route-progress-card"><div class="route-progress-spinner"></div><div class="route-progress-text"></div></div>';
+        document.body.appendChild(el);
     }
-    bar.querySelector('.bar-label').textContent = text || 'Обробка маршруту...';
-    bar.style.display = 'flex';
+    el.querySelector('.route-progress-text').textContent = text || 'Обробка маршруту...';
+    el.style.display = 'flex';
 }
 function hideRouteProgress() {
-    const bar = document.getElementById('routeProgressBar');
-    if (bar) bar.style.display = 'none';
+    const el = document.getElementById('routeProgressOverlay');
+    if (el) el.style.display = 'none';
 }
 function updateRouteProgress(text) {
-    const bar = document.getElementById('routeProgressBar');
-    if (bar) bar.querySelector('.bar-label').textContent = text;
+    const el = document.getElementById('routeProgressOverlay');
+    if (el) el.querySelector('.route-progress-text').textContent = text;
 }
 
 // Модалка конфлікту маршрутів - redesigned as bottom sheet
