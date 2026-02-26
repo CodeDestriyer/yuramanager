@@ -210,8 +210,8 @@
         
         /* Main content area */
         .main-content-area { flex: 1; padding: 12px; overflow-y: auto; transition: margin-left 0.3s ease, margin-right 0.3s ease; }
-        .main-content-area.shifted-by-bulk { margin-left: 220px; }
-        /* Коли PC sidebar розгорнутий — зсув не потрібен (bulk sidebar вміщується в зону PC sidebar) */
+        .main-content-area.shifted-by-bulk { margin-left: 300px; }
+        /* Коли PC sidebar розгорнутий — bulk sidebar = 300px = PC sidebar, зсув не потрібен */
         .pc-sidebar:not(.collapsed-sidebar) ~ .main-content-area.shifted-by-bulk { margin-left: 0; }
         @media (max-width: 1099px) {
             .main-content-area.shifted-by-bulk { margin-left: 0; margin-right: 180px; }
@@ -760,18 +760,38 @@
             top: 52px;
             left: 0;
             bottom: 0;
-            width: 220px;
-            background: linear-gradient(180deg, #7f1d1d 0%, #450a0a 100%); 
-            z-index: 200; 
-            box-shadow: 4px 0 20px rgba(0,0,0,0.3); 
+            width: 300px;
+            background: linear-gradient(180deg, #7f1d1d 0%, #450a0a 100%);
+            z-index: 200;
+            box-shadow: 4px 0 20px rgba(0,0,0,0.3);
             transform: translateX(-100%);
             transition: transform 0.3s ease;
             overflow-y: auto;
         }
-        .bulk-actions-sidebar.show { 
-            display: flex; 
+        .bulk-actions-sidebar.show {
+            display: flex;
             flex-direction: column;
             transform: translateX(0);
+        }
+        /* Кнопка Меню у bulk sidebar */
+        .bulk-sidebar-menu-btn {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 12px 14px;
+            border: 1px solid rgba(255,255,255,0.25);
+            border-radius: 8px;
+            background: rgba(255,255,255,0.08);
+            color: rgba(255,255,255,0.85);
+            font-size: 13px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            width: 100%;
+        }
+        .bulk-sidebar-menu-btn:hover {
+            background: rgba(255,255,255,0.18);
+            color: white;
         }
         .bulk-sidebar-header {
             padding: 16px;
@@ -1082,13 +1102,14 @@
             .bulk-sidebar-title { font-size: 13px; }
             .bulk-sidebar-count { font-size: 11px; padding: 3px 8px; }
             .bulk-sidebar-actions { padding: 6px; gap: 3px; }
-            .bulk-sidebar-btn { 
-                padding: 10px 12px; 
-                font-size: 12px; 
+            .bulk-sidebar-btn {
+                padding: 10px 12px;
+                font-size: 12px;
                 border-radius: 6px;
             }
             .bulk-sidebar-btn .btn-icon { font-size: 14px; }
             .bulk-sidebar-divider { margin: 6px 0; }
+            .bulk-sidebar-menu-btn { display: none; }
             .bulk-sidebar-close { padding: 8px; }
             .bulk-sidebar-close-btn { padding: 10px; font-size: 12px; }
             .bulk-sidebar-more-toggle { padding: 8px 10px; font-size: 11px; }
@@ -1675,6 +1696,9 @@
         <span class="bulk-sidebar-count"><span id="bulkCountSidebar">0</span> вибрано</span>
     </div>
     <div class="bulk-sidebar-actions">
+        <button class="bulk-sidebar-menu-btn" onclick="switchToMenu()">
+            <span>☰</span> Меню
+        </button>
         <button class="bulk-sidebar-btn" onclick="selectAllVisible()">
             <span class="btn-icon">☑️</span> Вибрати всіх
         </button>
@@ -2911,7 +2935,9 @@ function clearSelection() {
     document.getElementById('bulkCount').textContent = 0;
     const sidebarCount = document.getElementById('bulkCountSidebar');
     if (sidebarCount) sidebarCount.textContent = 0;
-    // Повертаємо контент і bottom-nav
+    // Повертаємо collapse btn, контент і bottom-nav
+    const collapseBtn = document.getElementById('pcSidebarCollapseBtn');
+    if (collapseBtn) collapseBtn.style.display = '';
     const contentArea = document.querySelector('.main-content-area');
     if (contentArea) contentArea.classList.remove('shifted-by-bulk');
     const bottomNav = document.querySelector('.bottom-nav');
@@ -2919,6 +2945,21 @@ function clearSelection() {
         bottomNav.classList.remove('hidden-by-bulk');
         bottomNav.style.display = '';
     }
+}
+
+function switchToMenu() {
+    // Ховаємо bulk sidebar, показуємо PC sidebar
+    const bulk = document.getElementById('bulkActionsSidebar');
+    if (bulk) bulk.classList.remove('show');
+    const pcSidebar = document.getElementById('pcSidebar');
+    if (pcSidebar) {
+        pcSidebar.classList.remove('collapsed-sidebar');
+        const btn = document.getElementById('pcSidebarCollapseBtn');
+        if (btn) { btn.textContent = '◀'; btn.style.left = '300px'; btn.classList.remove('sidebar-hidden'); btn.style.display = ''; }
+    }
+    // Зсув контенту не потрібен — PC sidebar тепер видимий
+    const contentArea = document.querySelector('.main-content-area');
+    if (contentArea) contentArea.classList.remove('shifted-by-bulk');
 }
 
 function updateBulkBar() {
@@ -2936,6 +2977,10 @@ function updateBulkBar() {
     
     // PC Sidebar - тільки ПОКАЗУЄМО, не ховаємо (ховає clearSelection)
     if (sidebar && count > 0) sidebar.classList.add('show');
+
+    // Ховаємо collapse btn коли bulk sidebar відкритий
+    const collapseBtn = document.getElementById('pcSidebarCollapseBtn');
+    if (collapseBtn) collapseBtn.style.display = count > 0 ? 'none' : '';
 
     // Зсув контенту коли bulk sidebar відкритий
     const contentArea = document.querySelector('.main-content-area');
@@ -5719,6 +5764,26 @@ function closeTagModal() {
     document.getElementById('tagModal').classList.remove('show');
 }
 
+function tagErrorText(code) {
+    const map = {
+        'E01': 'Помилка запиту (E01)',
+        'E02': 'Немає ID контакту (E02)',
+        'E03': 'Немає назви тегу (E03)',
+        'E10': 'Сервер тегів недоступний (E10)',
+        'E11': 'Помилка пошуку тегу (E11)',
+        'E20': 'Сервер тегів недоступний (E20)',
+        'E21': 'Не вдалось створити тег (E21)',
+        'E22': 'Тег існує, але не знайдено (E22)',
+        'E30': 'Smart Sender недоступний (E30)',
+        'E31': 'Контакт не знайдено в SS (E31)',
+        'E32': 'Помилка перевірки контакту (E32)',
+        'E40': 'Не вдалось повісити тег (E40)',
+        'E41': 'Контакт або тег не знайдено (E41)',
+        'E42': 'Помилка привʼязки тегу (E42)'
+    };
+    return map[code] || 'Невідома помилка (' + code + ')';
+}
+
 async function startTagging() {
     const tagName = document.getElementById('tagNameInput').value.trim();
     if (!tagName) return showToast('⚠️ Введіть назву тегу');
@@ -5762,17 +5827,17 @@ async function startTagging() {
             const data = await res.json();
 
             if (data.error) {
-                tagLog(logEl, '❌ ІД ' + item.userId + ' (' + item.name + ') — ' + data.error);
+                tagLog(logEl, '❌ ' + item.name + ' — ' + tagErrorText(data.error));
                 fail++;
             } else if (data.state === true || data.id || data.tagId) {
-                tagLog(logEl, '✅ ІД ' + item.userId + ' (' + item.name + ') — OK');
+                tagLog(logEl, '✅ ' + item.name + ' — OK');
                 ok++;
             } else {
-                tagLog(logEl, '⚠️ ІД ' + item.userId + ' (' + item.name + ') — ' + JSON.stringify(data));
+                tagLog(logEl, '⚠️ ' + item.name + ' — код: EUNK');
                 fail++;
             }
         } catch(e) {
-            tagLog(logEl, '❌ ІД ' + item.userId + ' (' + item.name + ') — ' + e.message);
+            tagLog(logEl, '❌ ' + item.name + ' — Немає зв\'язку (ENET)');
             fail++;
         }
 
