@@ -767,9 +767,6 @@
         .lead-card.dragging { opacity: 0.5; transform: scale(1.02); }
         .lead-card.drag-over { border-top: 3px solid var(--success); margin-top: -3px; }
 
-        /* BULK OVERLAY — не використовується, завжди прихований */
-        .bulk-overlay { display: none; }
-
         /* BULK ACTIONS SIDEBAR - виїзна панель (червоно-бордова) */
         .bulk-actions-sidebar {
             display: none;
@@ -1106,7 +1103,6 @@
         @media (max-width: 1099px) {
             /* Mobile: bulk sidebar ЗАХОВАНО, використовуємо bulk-actions-bar */
             .bulk-actions-sidebar { display: none !important; }
-            .bulk-overlay { display: none !important; }
 
             /* Mobile bulk action bar — компактна панель внизу */
             .bulk-actions-bar {
@@ -1806,8 +1802,6 @@
     </div>
 </div>
 
-<!-- BULK OVERLAY (mobile) -->
-<div class="bulk-overlay" id="bulkOverlay" onclick="clearSelection()"></div>
 <!-- BULK ACTIONS SIDEBAR -->
 <div class="bulk-actions-sidebar" id="bulkActionsSidebar">
     <div class="bulk-sidebar-header">
@@ -3113,8 +3107,6 @@ function clearSelection() {
     if (sidebar) sidebar.classList.remove('show');
     const bar = document.getElementById('bulkActionsBar');
     if (bar) bar.classList.remove('show');
-    const overlay = document.getElementById('bulkOverlay');
-    if (overlay) overlay.classList.remove('show');
     document.getElementById('bulkCount').textContent = 0;
     const sidebarCount = document.getElementById('bulkCountSidebar');
     if (sidebarCount) sidebarCount.textContent = 0;
@@ -3131,11 +3123,9 @@ function clearSelection() {
 }
 
 function switchToMenu() {
-    // Ховаємо bulk sidebar + overlay, показуємо PC sidebar
+    // Ховаємо bulk sidebar, показуємо PC sidebar
     const bulk = document.getElementById('bulkActionsSidebar');
     if (bulk) bulk.classList.remove('show');
-    const bulkOverlay = document.getElementById('bulkOverlay');
-    if (bulkOverlay) bulkOverlay.classList.remove('show');
     const pcSidebar = document.getElementById('pcSidebar');
     if (pcSidebar) {
         pcSidebar.classList.remove('collapsed-sidebar');
