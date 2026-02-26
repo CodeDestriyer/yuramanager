@@ -5788,13 +5788,29 @@ async function startTagging() {
     const tagName = document.getElementById('tagNameInput').value.trim();
     if (!tagName) return showToast('⚠️ Введіть назву тегу');
 
+    // Збираємо всіх з перевіркою на немає ІД та дублі
     const items = [];
+    const noId = [];
+    const seenIds = new Set();
+    const dupes = [];
+
     selectedIds.forEach(uid => {
         const p = findPassengerByUid(uid);
-        if (p && p.id) items.push({ userId: p.id, name: p.name || '—' });
+        if (!p) return;
+        const name = p.name || '—';
+        if (!p.id) {
+            noId.push(name);
+            return;
+        }
+        if (seenIds.has(String(p.id))) {
+            dupes.push(name + ' (ІД ' + p.id + ')');
+            return;
+        }
+        seenIds.add(String(p.id));
+        items.push({ userId: p.id, name: name });
     });
 
-    if (items.length === 0) return showToast('⚠️ У вибраних пасажирів немає ІД');
+    if (items.length === 0 && noId.length === 0 && dupes.length === 0) return showToast('⚠️ Нікого не вибрано');
 
     // UI → прогрес
     document.getElementById('tagFormBody').style.display = 'none';
@@ -5808,9 +5824,38 @@ async function startTagging() {
     bar.style.width = '0%';
     bar.style.background = '#7c3aed';
 
-    let ok = 0, fail = 0;
+    let ok = 0, fail = 0, skip = 0;
     tagLog(logEl, '🏷️ Тег: "' + tagName + '"');
-    tagLog(logEl, '👥 Пасажирів: ' + items.length);
+    tagLog(logEl, '👥 Вибрано: ' + selectedIds.size + ' | До тегування: ' + items.length);
+
+    // Логуємо пасажирів без ІД
+    if (noId.length > 0) {
+        tagLog(logEl, '─'.repeat(30));
+        noId.forEach(name => {
+            tagLog(logEl, '⛔ ' + name + ' — Немає ІД в системі');
+            fail++;
+        });
+    }
+
+    // Логуємо дублі
+    if (dupes.length > 0) {
+        tagLog(logEl, '─'.repeat(30));
+        dupes.forEach(d => {
+            tagLog(logEl, '🔁 ' + d + ' — Дубль ІД, пропущено');
+            skip++;
+        });
+    }
+
+    if (items.length === 0) {
+        tagLog(logEl, '─'.repeat(30));
+        tagLog(logEl, '📊 Нікого тегувати — всі без ІД або дублі');
+        bar.style.width = '100%';
+        bar.style.background = 'var(--warning)';
+        txt.textContent = '⚠️ Нікого тегувати';
+        document.getElementById('tagResultFooter').style.display = '';
+        return;
+    }
+
     tagLog(logEl, '─'.repeat(30));
 
     for (let i = 0; i < items.length; i++) {
@@ -5830,10 +5875,11 @@ async function startTagging() {
                 tagLog(logEl, '❌ ' + item.name + ' — ' + tagErrorText(data.error));
                 fail++;
             } else if (data.state === true || data.id || data.tagId) {
-                tagLog(logEl, '✅ ' + item.name + ' — OK');
+                const note = data.note === 'already_tagged' ? ' (вже був)' : '';
+                tagLog(logEl, '✅ ' + item.name + ' — OK' + note);
                 ok++;
             } else {
-                tagLog(logEl, '⚠️ ' + item.name + ' — код: EUNK');
+                tagLog(logEl, '⚠️ ' + item.name + ' — Невідома відповідь (EUNK)');
                 fail++;
             }
         } catch(e) {
@@ -5845,16 +5891,20 @@ async function startTagging() {
     }
 
     tagLog(logEl, '─'.repeat(30));
-    tagLog(logEl, '📊 Результат: ✅ ' + ok + ' успішно, ❌ ' + fail + ' помилок');
+    let summary = '📊 ✅' + ok;
+    if (fail > 0) summary += ' ❌' + fail;
+    if (skip > 0) summary += ' 🔁' + skip;
+    tagLog(logEl, summary);
 
-    txt.textContent = fail === 0
-        ? '✅ Протеговано ' + ok + ' пасажирів!'
-        : '⚠️ Готово: ' + ok + ' ✅ / ' + fail + ' ❌';
+    const allGood = fail === 0 && skip === 0 && noId.length === 0;
+    txt.textContent = allGood
+        ? '✅ Протеговано ' + ok + '!'
+        : '⚠️ ✅' + ok + (fail > 0 ? ' ❌' + fail : '') + (skip > 0 ? ' 🔁' + skip : '');
     bar.style.width = '100%';
-    bar.style.background = fail === 0 ? 'var(--success)' : 'var(--warning)';
+    bar.style.background = allGood ? 'var(--success)' : 'var(--warning)';
     document.getElementById('tagResultFooter').style.display = '';
 
-    showToast(fail === 0 ? '🏷️ Протеговано: ' + ok : '🏷️ ' + ok + ' ✅ / ' + fail + ' ❌');
+    showToast(allGood ? '🏷️ Протеговано: ' + ok : '🏷️ ✅' + ok + (fail > 0 ? ' ❌' + fail : '') + (skip > 0 ? ' 🔁' + skip : ''));
 }
 
 function tagLog(el, text) {
