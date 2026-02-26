@@ -211,6 +211,8 @@
         /* Main content area */
         .main-content-area { flex: 1; padding: 12px; overflow-y: auto; transition: margin-left 0.3s ease, margin-right 0.3s ease; }
         .main-content-area.shifted-by-bulk { margin-left: 220px; }
+        /* Коли PC sidebar розгорнутий — зсув не потрібен (bulk sidebar вміщується в зону PC sidebar) */
+        .pc-sidebar:not(.collapsed-sidebar) ~ .main-content-area.shifted-by-bulk { margin-left: 0; }
         @media (max-width: 1099px) {
             .main-content-area.shifted-by-bulk { margin-left: 0; margin-right: 180px; }
         }
