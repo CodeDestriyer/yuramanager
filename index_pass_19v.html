@@ -2070,11 +2070,68 @@ let passengers = [
 // Таблиця маршрутів пасажирів
 const ROUTE_SPREADSHEET_ID = '1iKlD0Bj-5qB3Gc1d5ZBHscbRipcSe5xU7svqBfpB77Y';
 
-let vehicles = [
+const DEFAULT_VEHICLES = [
     {id:'v1', name:'Авто 1', seats:8, routeSheet:'Пас. Маршрут 1'},
     {id:'v2', name:'Авто 2', seats:6, routeSheet:'Пас. Маршрут 2'},
     {id:'v3', name:'Авто 3', seats:8, routeSheet:'Пас. Маршрут 3'}
 ];
+let vehicles = DEFAULT_VEHICLES.map(v => ({...v}));
+
+// Список службових аркушів які НЕ є маршрутами
+const EXCLUDED_SHEETS = ['логи', 'розсилка', 'лог', 'logs', 'mailing'];
+
+function isRouteSheet(name) {
+    return !EXCLUDED_SHEETS.some(ex => name.toLowerCase().includes(ex));
+}
+
+// Синхронізація vehicles з сервера — підтягує нові аркуші, видаляє зниклі
+async function syncVehiclesFromServer() {
+    try {
+        const res = await fetch(ROUTE_API_URL, {
+            method: 'POST',
+            headers: { 'Content-Type': 'text/plain' },
+            body: JSON.stringify({ action: 'getAvailableRoutes' })
+        });
+        const data = await res.json();
+        if (!data.success || !data.routes) return;
+
+        // Фільтруємо лише маршрутні аркуші
+        const serverSheets = data.routes.filter(r => isRouteSheet(r.name));
+
+        // 1) Додаємо нові аркуші яких немає в vehicles
+        for (const sheet of serverSheets) {
+            const exists = vehicles.find(v =>
+                v.routeSheet === sheet.name || v.name === sheet.name
+            );
+            if (!exists) {
+                vehicles.push({
+                    id: 'v' + Date.now() + '_' + Math.random().toString(36).slice(2, 6),
+                    name: sheet.name.replace(/^Пас\.\s*/, ''),
+                    seats: 8,
+                    routeSheet: sheet.name
+                });
+            }
+        }
+
+        // 2) Помічаємо авто чий аркуш зник з сервера (але не видаляємо дефолтні)
+        const serverNames = serverSheets.map(s => s.name);
+        vehicles = vehicles.filter(v => {
+            if (!v.routeSheet) return true; // без аркуша — залишаємо
+            if (serverNames.includes(v.routeSheet)) return true; // є на сервері
+            // Перевіряємо чи це дефолтне авто — залишаємо як fallback
+            if (DEFAULT_VEHICLES.find(d => d.id === v.id)) return true;
+            return false; // аркуш видалено з сервера — прибираємо
+        });
+
+        // Оновлюємо UI
+        updateVehiclesList();
+        updateMobileVehicles();
+        if (typeof updateRoutesList === 'function') updateRoutesList();
+        if (typeof updatePcVehiclesList === 'function') updatePcVehiclesList();
+    } catch (e) {
+        console.error('syncVehiclesFromServer error:', e);
+    }
+}
 let filters = {date:'',vehicle:'',search:'',showArchive:false,statusFilter:'',routeVehicle:'',direction:'all',specialStatus:'',statusDateFrom:'',statusDateTo:'',showNewOnly:true};
 let selectedIds = new Set();
 let editingId = null;
@@ -2099,13 +2156,16 @@ document.addEventListener('DOMContentLoaded', () => {
     render();
     updateVehiclesList();
     updateAllCounts();
-    
+
+    // Синхронізуємо авто з сервера (підтягуємо нові аркуші)
+    syncVehiclesFromServer().then(() => updateAllCounts());
+
     // Перевірка перевищення місткості при завантаженні (з затримкою)
     setTimeout(() => checkAllCapacityWarnings(), 2000);
-    
+
     // Періодична перевірка кожні 5 хвилин
     setInterval(() => checkAllCapacityWarnings(), 300000);
-    
+
     // Тихе авто-оновлення кожні 60 секунд
     setInterval(() => silentSync(), 60000);
 });
@@ -3222,10 +3282,7 @@ async function updateAllRoutesCount() {
         
         if (data.success && data.routes) {
             // Фільтруємо: тільки аркуші маршрутів (ігноруємо логи, розсилка тощо)
-            const routeSheetNames = vehicles.map(v => v.routeSheet).filter(Boolean);
-            const validRoutes = data.routes.filter(r =>
-                routeSheetNames.some(s => s === r.name || r.name.includes(s) || s.includes(r.name))
-            );
+            const validRoutes = data.routes.filter(r => isRouteSheet(r.name));
             // Рахуємо суму всіх записів
             const totalCount = validRoutes.reduce((sum, r) => sum + (r.count || 0), 0);
             
@@ -3349,10 +3406,7 @@ async function loadAllRoutePassengers() {
         
         if (routesResponse.success && routesResponse.routes && routesResponse.routes.length > 0) {
             // Фільтруємо: тільки аркуші маршрутів (ігноруємо логи, розсилка тощо)
-            const routeSheetNames = vehicles.map(v => v.routeSheet).filter(Boolean);
-            const routes = routesResponse.routes.filter(r =>
-                routeSheetNames.some(s => s === r.name || r.name.includes(s) || s.includes(r.name))
-            );
+            const routes = routesResponse.routes.filter(r => isRouteSheet(r.name));
             if (routes.length === 0) {
                 hideLoader();
                 renderRoutePassengers();
