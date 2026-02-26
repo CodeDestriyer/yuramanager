@@ -4133,27 +4133,44 @@ function startOptimization() {
     // Визначаємо поле адреси для оптимізації
     const addressField = optimizeBy === 'from' ? 'from' : 'to';
 
-    // Чистимо дані - відправляємо тільки потрібні поля з явними адресами
-    // Додаємо поле "address" — адреса для оптимізації (сервер шукає саме це поле)
-    const passengersWithUid = optimizePassengersList.map(p => {
-        const addr = (optimizeBy === 'from' ? p.from : p.to) || '';
+    // Формуємо дані пасажирів у форматі серверних колонок
+    // Серверний скрипт читає з таблиці: A=date, B=addressFrom, C=addressTo, D=seats, E=name, F=phone, ... K=id
+    // Тому передаємо і об'єкти, і рядки (row) для запису в таблицю
+    const passengersForApi = optimizePassengersList.map(p => {
         // Визначаємо ім'я авто (якщо збережено ID, конвертуємо в name)
         let vehicleName = p.vehicle || '';
         const veh = vehicles.find(v => v.id === vehicleName);
         if (veh) vehicleName = veh.name;
 
         return {
+            // Поля як об'єкт (для API що читає по ключам)
             id: p.id || '',
             name: p.name || '',
             phone: p.phone || '',
             from: p.from || '',
             to: p.to || '',
-            address: addr, // Головне поле для геокодування
+            addressFrom: p.from || '',   // Явна назва — Адреса Відправки (кол. B)
+            addressTo: p.to || '',       // Явна назва — Адреса прибуття (кол. C)
+            address: (optimizeBy === 'from' ? p.from : p.to) || '', // Адреса для оптимізації
             seats: p.seats || 1,
-            payment: p.payment || '',
-            direction: p.direction || '',
             date: p.date || '',
             vehicle: vehicleName,
+            payment: p.payment || '',
+            direction: p.direction || '',
+            // Рядок для запису в таблицю "Оптимізація пасажири" (порядок колонок A-K)
+            row: [
+                p.date || '',       // A (1)  - Дата виїзду
+                p.from || '',       // B (2)  - Адреса Відправки
+                p.to || '',         // C (3)  - Адреса прибуття
+                p.seats || 1,       // D (4)  - Кількість місць
+                p.name || '',       // E (5)  - ПіБ
+                p.phone || '',      // F (6)  - Телефон Пасажира
+                vehicleName,        // G (7)  - Авто
+                p.payment || '',    // H (8)  - Оплата
+                p.direction || '',  // I (9)  - Напрямок
+                '',                 // J (10) -
+                p.id || ''          // K (11) - ІД
+            ],
             _uid: (p._sheet && p._rowNum) ? `${p._sheet}_${p._rowNum}` : null,
             _sheet: p._sheet || '',
             _rowNum: p._rowNum || ''
@@ -4161,8 +4178,8 @@ function startOptimization() {
     });
 
     // Перевіряємо чи є адреси для оптимізації
-    const withAddress = passengersWithUid.filter(p => p.address && p.address.trim());
-    const withoutAddress = passengersWithUid.filter(p => !p.address || !p.address.trim());
+    const withAddress = passengersForApi.filter(p => p.address && p.address.trim());
+    const withoutAddress = passengersForApi.filter(p => !p.address || !p.address.trim());
 
     if (withAddress.length === 0) {
         document.getElementById('optimizeFormBody').style.display = 'block';
@@ -4176,12 +4193,24 @@ function startOptimization() {
         showToast(`⚠️ ${withoutAddress.length} лідів без адреси — будуть пропущені`);
     }
 
-    console.log('Optimize payload:', { optimizeBy, startAddress, endAddress, passengers: passengersWithUid.map(p => ({ id: p.id, address: p.address, from: p.from, to: p.to })) });
+    console.log('Optimize payload:', {
+        optimizeBy,
+        startAddress: startAddress || 'Ужгород',
+        endAddress,
+        passengersCount: passengersForApi.length,
+        sample: passengersForApi[0] ? {
+            id: passengersForApi[0].id,
+            from: passengersForApi[0].from,
+            to: passengersForApi[0].to,
+            address: passengersForApi[0].address,
+            row: passengersForApi[0].row
+        } : null
+    });
 
     const payload = {
         action: 'optimize',
         payload: {
-            passengers: passengersWithUid,
+            passengers: passengersForApi,
             optimizeBy: optimizeBy,
             startAddress: startAddress || 'Ужгород',
             endAddress: endAddress
@@ -4201,15 +4230,17 @@ function startOptimization() {
             document.getElementById('optimizeFormBody').style.display = 'block';
             document.getElementById('optimizeLoadingBody').style.display = 'none';
             document.getElementById('optimizeFormFooter').style.display = 'flex';
-            showToast('❌ ' + data.error);
+            const errMsg = data.error || data.message || 'Невідома помилка';
+            console.error('Optimize API error:', data);
+            showToast('❌ ' + errMsg);
         }
     })
     .catch(err => {
-        console.error('Optimize error:', err);
+        console.error('Optimize fetch error:', err);
         document.getElementById('optimizeFormBody').style.display = 'block';
         document.getElementById('optimizeLoadingBody').style.display = 'none';
         document.getElementById('optimizeFormFooter').style.display = 'flex';
-        showToast('❌ Помилка зв\'язку');
+        showToast('❌ Помилка зв\'язку: ' + err.message);
     });
 }
 
