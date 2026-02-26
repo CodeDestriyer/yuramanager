@@ -1761,6 +1761,20 @@
 <div class="toast" id="toast"></div>
 
 <script>
+// Google Maps API init callback
+window.mapsApiReady = false;
+window.mapsGeocoder = null;
+window.mapsDirections = null;
+function initMapsAPI() {
+    window.mapsApiReady = true;
+    window.mapsGeocoder = new google.maps.Geocoder();
+    window.mapsDirections = new google.maps.DirectionsService();
+    console.log('✅ Google Maps API ready');
+}
+</script>
+<script async defer src="https://maps.googleapis.com/maps/api/js?key=AIzaSyCthPzhD6zDM9zR-re0R2ceohyhCRdawNc&callback=initMapsAPI"></script>
+
+<script>
 const ALL_COLUMNS = {
     name:{label:'ПіБ',group:'row1'},
     phone:{label:'Телефон',group:'row1'},
@@ -4119,129 +4133,295 @@ function selectOptimizeBy(by) {
     document.getElementById('optTo').classList.toggle('selected', by === 'to');
 }
 
-function startOptimization() {
+// ============================================
+// КЛІЄНТСЬКА ОПТИМІЗАЦІЯ (Google Maps JS API)
+// ============================================
+const OPTIMIZE_MAX_WAYPOINTS = 23; // Ліміт Google Directions API
+
+function sleep(ms) { return new Promise(r => setTimeout(r, ms)); }
+
+// Геокодування однієї адреси через Google Maps JS API
+function geocodeClient(address) {
+    return new Promise(resolve => {
+        if (!window.mapsGeocoder) return resolve(null);
+        window.mapsGeocoder.geocode({ address: address }, (results, status) => {
+            if (status === 'OK' && results && results[0]) {
+                resolve({
+                    lat: results[0].geometry.location.lat(),
+                    lng: results[0].geometry.location.lng()
+                });
+            } else {
+                console.warn('Geocode failed:', address, '→', status);
+                resolve(null);
+            }
+        });
+    });
+}
+
+// Оптимізація через Google Directions API (реальні дороги)
+function optimizeDirectionsClient(geocodedPassengers, startCoords, endCoords) {
+    return new Promise((resolve, reject) => {
+        if (!window.mapsDirections) return reject(new Error('Maps API not ready'));
+
+        const waypoints = geocodedPassengers.map(p => ({
+            location: new google.maps.LatLng(p.coords.lat, p.coords.lng),
+            stopover: true
+        }));
+
+        const origin = new google.maps.LatLng(startCoords.lat, startCoords.lng);
+        let destination, routeWaypoints;
+
+        if (endCoords) {
+            destination = new google.maps.LatLng(endCoords.lat, endCoords.lng);
+            routeWaypoints = waypoints;
+        } else {
+            destination = waypoints[waypoints.length - 1].location;
+            routeWaypoints = waypoints.slice(0, -1);
+        }
+
+        window.mapsDirections.route({
+            origin: origin,
+            destination: destination,
+            waypoints: routeWaypoints,
+            optimizeWaypoints: true,
+            travelMode: google.maps.TravelMode.DRIVING
+        }, (response, status) => {
+            if (status === 'OK') {
+                const order = response.routes[0].waypoint_order;
+                if (endCoords) {
+                    resolve(order);
+                } else {
+                    const result = order.slice();
+                    result.push(geocodedPassengers.length - 1);
+                    resolve(result);
+                }
+            } else {
+                reject(new Error('Directions API: ' + status));
+            }
+        });
+    });
+}
+
+// Fallback: Nearest Neighbor (по прямій)
+function nearestNeighborClient(geocodedPassengers, startCoords) {
+    const n = geocodedPassengers.length;
+    if (n === 0) return [];
+    if (n === 1) return [0];
+
+    function haversine(c1, c2) {
+        const R = 6371;
+        const dLat = (c2.lat - c1.lat) * Math.PI / 180;
+        const dLng = (c2.lng - c1.lng) * Math.PI / 180;
+        const a = Math.sin(dLat/2)**2 + Math.cos(c1.lat*Math.PI/180) * Math.cos(c2.lat*Math.PI/180) * Math.sin(dLng/2)**2;
+        return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+    }
+
+    // Знаходимо найближчу до старту
+    let currentIdx = 0;
+    let minDist = Infinity;
+    for (let i = 0; i < n; i++) {
+        const d = haversine(startCoords, geocodedPassengers[i].coords);
+        if (d < minDist) { minDist = d; currentIdx = i; }
+    }
+
+    const visited = Array(n).fill(false);
+    const tour = [currentIdx];
+    visited[currentIdx] = true;
+
+    for (let step = 1; step < n; step++) {
+        let nearest = -1, nearDist = Infinity;
+        for (let j = 0; j < n; j++) {
+            if (!visited[j]) {
+                const d = haversine(geocodedPassengers[currentIdx].coords, geocodedPassengers[j].coords);
+                if (d < nearDist) { nearDist = d; nearest = j; }
+            }
+        }
+        if (nearest === -1) break;
+        tour.push(nearest);
+        visited[nearest] = true;
+        currentIdx = nearest;
+    }
+    return tour;
+}
+
+// Генерація посилань на Google Maps
+function generateOptimizeMapLinks(orderedPassengers, startAddr, endAddr) {
+    const MAX_PER_MAP = 25;
+    const links = [];
+    const total = orderedPassengers.length;
+    if (total === 0) return links;
+
+    const perChunk = MAX_PER_MAP - 1;
+    let chunkStart = 0;
+
+    while (chunkStart < total) {
+        const chunkEnd = Math.min(chunkStart + perChunk, total);
+        const chunk = orderedPassengers.slice(chunkStart, chunkEnd);
+
+        const origin = chunkStart === 0
+            ? (startAddr || 'Ужгород')
+            : orderedPassengers[chunkStart - 1].address;
+
+        let destination, waypointItems;
+        if (chunkEnd >= total && endAddr) {
+            destination = endAddr;
+            waypointItems = chunk;
+        } else {
+            destination = chunk[chunk.length - 1].address;
+            waypointItems = chunk.slice(0, -1);
+        }
+
+        let url = 'https://www.google.com/maps/dir/' + encodeURIComponent(origin);
+        waypointItems.forEach(p => { url += '/' + encodeURIComponent(p.address); });
+        url += '/' + encodeURIComponent(destination);
+
+        links.push({ url, from: chunkStart + 1, to: chunkEnd, total });
+        chunkStart = chunkEnd;
+    }
+    return links;
+}
+
+// ГОЛОВНА ФУНКЦІЯ ОПТИМІЗАЦІЇ (клієнтська)
+async function startOptimization() {
     if (!optimizePassengersList.length) return;
-    
-    // Показуємо завантаження
+    if (!window.mapsApiReady) {
+        showToast('⏳ Google Maps API ще завантажується, зачекайте...');
+        return;
+    }
+
+    // UI → loading
     document.getElementById('optimizeFormBody').style.display = 'none';
     document.getElementById('optimizeLoadingBody').style.display = 'block';
     document.getElementById('optimizeFormFooter').style.display = 'none';
-    
-    const startAddress = document.getElementById('optimizeStart').value.trim();
+
+    const startAddress = document.getElementById('optimizeStart').value.trim() || 'Ужгород';
     const endAddress = document.getElementById('optimizeEnd').value.trim();
-    
-    // Визначаємо поле адреси для оптимізації
-    const addressField = optimizeBy === 'from' ? 'from' : 'to';
+    const optimizeLabel = optimizeBy === 'from' ? 'Адреса ВІДПРАВКИ' : 'Адреса ПРИБУТТЯ';
 
-    // Формуємо дані пасажирів у форматі серверних колонок
-    // Серверний скрипт читає з таблиці: A=date, B=addressFrom, C=addressTo, D=seats, E=name, F=phone, ... K=id
-    // Тому передаємо і об'єкти, і рядки (row) для запису в таблицю
-    const passengersForApi = optimizePassengersList.map(p => {
-        // Визначаємо ім'я авто (якщо збережено ID, конвертуємо в name)
-        let vehicleName = p.vehicle || '';
-        const veh = vehicles.find(v => v.id === vehicleName);
-        if (veh) vehicleName = veh.name;
-
-        return {
-            // Поля як об'єкт (для API що читає по ключам)
+    try {
+        // 1. Збираємо пасажирів з адресами
+        const allPassengers = optimizePassengersList.map(p => ({
             id: p.id || '',
             name: p.name || '',
             phone: p.phone || '',
             from: p.from || '',
             to: p.to || '',
-            addressFrom: p.from || '',   // Явна назва — Адреса Відправки (кол. B)
-            addressTo: p.to || '',       // Явна назва — Адреса прибуття (кол. C)
-            address: (optimizeBy === 'from' ? p.from : p.to) || '', // Адреса для оптимізації
             seats: p.seats || 1,
             date: p.date || '',
-            vehicle: vehicleName,
             payment: p.payment || '',
             direction: p.direction || '',
-            // Рядок для запису в таблицю "Оптимізація пасажири" (порядок колонок A-K)
-            row: [
-                p.date || '',       // A (1)  - Дата виїзду
-                p.from || '',       // B (2)  - Адреса Відправки
-                p.to || '',         // C (3)  - Адреса прибуття
-                p.seats || 1,       // D (4)  - Кількість місць
-                p.name || '',       // E (5)  - ПіБ
-                p.phone || '',      // F (6)  - Телефон Пасажира
-                vehicleName,        // G (7)  - Авто
-                p.payment || '',    // H (8)  - Оплата
-                p.direction || '',  // I (9)  - Напрямок
-                '',                 // J (10) -
-                p.id || ''          // K (11) - ІД
-            ],
+            vehicle: p.vehicle || '',
+            address: (optimizeBy === 'from' ? p.from : p.to) || '',
+            coords: null,
             _uid: (p._sheet && p._rowNum) ? `${p._sheet}_${p._rowNum}` : null,
-            _sheet: p._sheet || '',
-            _rowNum: p._rowNum || ''
-        };
-    });
+            _sheet: p._sheet,
+            _rowNum: p._rowNum
+        }));
 
-    // Перевіряємо чи є адреси для оптимізації
-    const withAddress = passengersForApi.filter(p => p.address && p.address.trim());
-    const withoutAddress = passengersForApi.filter(p => !p.address || !p.address.trim());
+        const withAddress = allPassengers.filter(p => p.address && p.address.trim());
+        const withoutAddress = allPassengers.filter(p => !p.address || !p.address.trim());
 
-    if (withAddress.length === 0) {
+        if (withAddress.length === 0) {
+            throw new Error(`Жоден лід не має адреси (поле "${optimizeBy === 'from' ? 'Звідки' : 'Куди'}")`);
+        }
+
+        // 2. Геокодуємо всі адреси
+        updateLoader('Геокодування адрес...', `0 / ${withAddress.length}`);
+        const geocoded = [];
+        const notGeocodedList = [];
+
+        for (let i = 0; i < withAddress.length; i++) {
+            updateLoader(`📍 ${withAddress[i].address}`, `${i + 1} / ${withAddress.length}`);
+
+            const coords = await geocodeClient(withAddress[i].address);
+            if (coords) {
+                withAddress[i].coords = coords;
+                geocoded.push(withAddress[i]);
+            } else {
+                notGeocodedList.push({
+                    id: withAddress[i].id,
+                    name: withAddress[i].name,
+                    address: withAddress[i].address,
+                    uid: withAddress[i]._uid
+                });
+            }
+
+            // Rate limit
+            if (i < withAddress.length - 1) await sleep(150);
+        }
+
+        if (geocoded.length === 0) {
+            throw new Error('Жодну адресу не вдалось геокодувати! Перевірте адреси пасажирів.');
+        }
+
+        // 3. Геокодуємо старт та фініш
+        updateLoader('📍 Геокодування старту...', '');
+        const startCoords = await geocodeClient(startAddress) || { lat: 48.6209, lng: 22.2879 };
+        let endCoords = null;
+        if (endAddress) {
+            updateLoader('📍 Геокодування фінішу...', '');
+            endCoords = await geocodeClient(endAddress);
+        }
+
+        // 4. Оптимізація маршруту
+        updateLoader('🗺️ Оптимізація маршруту...', `${geocoded.length} точок`);
+        let optimizedOrder = null;
+        let method = '';
+
+        if (geocoded.length <= OPTIMIZE_MAX_WAYPOINTS) {
+            try {
+                optimizedOrder = await optimizeDirectionsClient(geocoded, startCoords, endCoords);
+                method = 'Google Directions API (реальні дороги)';
+            } catch(e) {
+                console.warn('Directions API fallback:', e.message);
+            }
+        }
+
+        if (!optimizedOrder || optimizedOrder.length === 0) {
+            optimizedOrder = nearestNeighborClient(geocoded, startCoords);
+            method = 'Nearest Neighbor (по прямій)';
+        }
+
+        // 5. Формуємо результат
+        const orderedPassengers = optimizedOrder.map(idx => geocoded[idx]);
+        const mapLinks = generateOptimizeMapLinks(orderedPassengers, startAddress, endAddress);
+
+        console.log('✅ Optimization done:', {
+            total: withAddress.length,
+            geocoded: geocoded.length,
+            optimized: orderedPassengers.length,
+            method,
+            notGeocoded: notGeocodedList.length
+        });
+
+        // 6. Показуємо результат
+        document.getElementById('optimizeLoadingBody').style.display = 'none';
+        showOptimizationResult({
+            success: true,
+            optimizeBy: optimizeLabel,
+            start: startAddress,
+            end: endAddress || '(остання точка)',
+            stats: {
+                total: withAddress.length,
+                geocoded: geocoded.length,
+                optimized: orderedPassengers.length
+            },
+            method: method,
+            mapLinks: mapLinks,
+            orderedPassengers: orderedPassengers,
+            notGeocodedList: notGeocodedList
+        });
+
+        // 7. Оновлюємо порядок в CRM
+        applyOptimizedOrder(orderedPassengers, notGeocodedList);
+
+    } catch(err) {
+        console.error('Optimize error:', err);
         document.getElementById('optimizeFormBody').style.display = 'block';
         document.getElementById('optimizeLoadingBody').style.display = 'none';
         document.getElementById('optimizeFormFooter').style.display = 'flex';
-        showToast(`❌ Жоден лід не має адреси (поле "${addressField === 'from' ? 'Звідки' : 'Куди'}")`);
-        return;
+        showToast('❌ ' + err.message);
     }
-
-    if (withoutAddress.length > 0) {
-        showToast(`⚠️ ${withoutAddress.length} лідів без адреси — будуть пропущені`);
-    }
-
-    console.log('Optimize payload:', {
-        optimizeBy,
-        startAddress: startAddress || 'Ужгород',
-        endAddress,
-        passengersCount: passengersForApi.length,
-        sample: passengersForApi[0] ? {
-            id: passengersForApi[0].id,
-            from: passengersForApi[0].from,
-            to: passengersForApi[0].to,
-            address: passengersForApi[0].address,
-            row: passengersForApi[0].row
-        } : null
-    });
-
-    const payload = {
-        action: 'optimize',
-        payload: {
-            passengers: passengersForApi,
-            optimizeBy: optimizeBy,
-            startAddress: startAddress || 'Ужгород',
-            endAddress: endAddress
-        }
-    };
-    
-    fetch(API_URL, {
-        method: 'POST',
-        headers: { 'Content-Type': 'text/plain' },
-        body: JSON.stringify(payload)
-    })
-    .then(r => r.json())
-    .then(data => {
-        if (data.success) {
-            showOptimizationResult(data);
-        } else {
-            document.getElementById('optimizeFormBody').style.display = 'block';
-            document.getElementById('optimizeLoadingBody').style.display = 'none';
-            document.getElementById('optimizeFormFooter').style.display = 'flex';
-            const errMsg = data.error || data.message || 'Невідома помилка';
-            console.error('Optimize API error:', data);
-            showToast('❌ ' + errMsg);
-        }
-    })
-    .catch(err => {
-        console.error('Optimize fetch error:', err);
-        document.getElementById('optimizeFormBody').style.display = 'block';
-        document.getElementById('optimizeLoadingBody').style.display = 'none';
-        document.getElementById('optimizeFormFooter').style.display = 'flex';
-        showToast('❌ Помилка зв\'язку: ' + err.message);
-    });
 }
 
 function showOptimizationResult(data) {
