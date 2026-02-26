@@ -209,7 +209,11 @@
         .pc-sidebar-add:hover { border-color: var(--info); background: #eff6ff; }
         
         /* Main content area */
-        .main-content-area { flex: 1; padding: 12px; overflow-y: auto; }
+        .main-content-area { flex: 1; padding: 12px; overflow-y: auto; transition: margin-left 0.3s ease, margin-right 0.3s ease; }
+        .main-content-area.shifted-by-bulk { margin-left: 220px; }
+        @media (max-width: 1099px) {
+            .main-content-area.shifted-by-bulk { margin-left: 0; margin-right: 180px; }
+        }
 
         /* DASHBOARD - Owner Only */
         .dashboard-panel {
@@ -2905,9 +2909,14 @@ function clearSelection() {
     document.getElementById('bulkCount').textContent = 0;
     const sidebarCount = document.getElementById('bulkCountSidebar');
     if (sidebarCount) sidebarCount.textContent = 0;
-    // Повертаємо bottom-nav
+    // Повертаємо контент і bottom-nav
+    const contentArea = document.querySelector('.main-content-area');
+    if (contentArea) contentArea.classList.remove('shifted-by-bulk');
     const bottomNav = document.querySelector('.bottom-nav');
-    if (bottomNav) bottomNav.classList.remove('hidden-by-bulk');
+    if (bottomNav) {
+        bottomNav.classList.remove('hidden-by-bulk');
+        bottomNav.style.display = '';
+    }
 }
 
 function updateBulkBar() {
@@ -2926,9 +2935,16 @@ function updateBulkBar() {
     // PC Sidebar - тільки ПОКАЗУЄМО, не ховаємо (ховає clearSelection)
     if (sidebar && count > 0) sidebar.classList.add('show');
 
+    // Зсув контенту коли bulk sidebar відкритий
+    const contentArea = document.querySelector('.main-content-area');
+    if (contentArea) contentArea.classList.toggle('shifted-by-bulk', count > 0);
+
     // Ховаємо bottom-nav коли bulk sidebar відкритий
     const bottomNav = document.querySelector('.bottom-nav');
-    if (bottomNav) bottomNav.classList.toggle('hidden-by-bulk', count > 0);
+    if (bottomNav) {
+        bottomNav.classList.toggle('hidden-by-bulk', count > 0);
+        bottomNav.style.display = count > 0 ? 'none' : '';
+    }
     
     const isRouteView = filters.statusFilter === 'route' && filters.routeVehicle;
     const isArchiveView = filters.showArchive;
