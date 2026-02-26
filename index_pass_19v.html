@@ -2601,10 +2601,10 @@ function renderCalendarTo(containerId) {
         let cls = 'calendar-day';
         if (dateStr === today) cls += ' today';
         if (dateStr === filters.date) cls += ' selected';
-        if (count > 0) cls += ' has-leads';
+        if (seats > 0) cls += ' has-leads';
         if (isOverbooked) cls += ' overbooked';
         const tooltip = isOverbooked ? `title="⚠️ ${seats}/${totalCapacity} місць"` : '';
-        daysHtml += `<div class="${cls}" onclick="selectDate('${dateStr}')" ${tooltip}>${day}${count ? `<span class="calendar-day-count">${count}</span>` : ''}</div>`;
+        daysHtml += `<div class="${cls}" onclick="selectDate('${dateStr}')" ${tooltip}>${day}${seats ? `<span class="calendar-day-count">${seats}</span>` : ''}</div>`;
     }
     
     // Дні наступного місяця (блідо)
