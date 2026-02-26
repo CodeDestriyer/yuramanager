@@ -2562,11 +2562,12 @@ function renderCalendarTo(containerId) {
     const months = ['Січень','Лютий','Березень','Квітень','Травень','Червень','Липень','Серпень','Вересень','Жовтень','Листопад','Грудень'];
     const today = new Date().toISOString().split('T')[0];
     
-    // Рахуємо кількість МІСЦЬ (не лідів) на кожну дату
+    // Рахуємо кількість МІСЦЬ (не лідів) на кожну дату (з урахуванням напрямку)
     const seatCounts = {};
     const leadCounts = {};
     const hiddenInCalendar = ['archived', 'refused', 'transferred', 'deleted'];
-    passengers.filter(p => !hiddenInCalendar.includes(p.status)).forEach(p => {
+    const dir = filters.direction;
+    passengers.filter(p => !hiddenInCalendar.includes(p.status)).filter(p => !dir || dir === 'all' || p.direction === dir).forEach(p => {
         if(p.date) {
             leadCounts[p.date] = (leadCounts[p.date]||0) + 1;
             seatCounts[p.date] = (seatCounts[p.date]||0) + (parseInt(p.seats) || 1);
@@ -5866,12 +5867,16 @@ function setDirection(dir) {
     // Синхронізуємо dropdown в календарі
     document.querySelectorAll('.cal-direction-select').forEach(s => s.value = dir);
 
+    // Закриваємо відкриті dropdown
+    document.querySelectorAll('.dropdown-menu').forEach(d => d.classList.remove('show'));
+
     // Оновлюємо label
     const labels = {'all': 'Пасажири', 'ua-eu': '🇺🇦→🇪🇺', 'eu-ua': '🇪🇺→🇺🇦'};
     const navLabel = document.getElementById('navPassengersLabel');
     if (navLabel) navLabel.textContent = labels[dir] || 'Пасажири';
 
     render();
+    renderCalendars();
     updateVehiclesList();
     updateAllCounts();
 }
