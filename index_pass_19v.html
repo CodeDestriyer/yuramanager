@@ -767,9 +767,8 @@
         .lead-card.dragging { opacity: 0.5; transform: scale(1.02); }
         .lead-card.drag-over { border-top: 3px solid var(--success); margin-top: -3px; }
 
-        /* BULK OVERLAY (mobile) */
-        .bulk-overlay { display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.5); z-index: 201; backdrop-filter: blur(2px); }
-        .bulk-overlay.show { display: block; }
+        /* BULK OVERLAY — не використовується, завжди прихований */
+        .bulk-overlay { display: none; }
 
         /* BULK ACTIONS SIDEBAR - виїзна панель (червоно-бордова) */
         .bulk-actions-sidebar {
@@ -3162,11 +3161,9 @@ function updateBulkBar() {
     // Mobile bar - показуємо/ховаємо
     bar.classList.toggle('show', count > 0);
 
-    // PC: sidebar + overlay
+    // PC: sidebar (без overlay — ліди мають бути клікабельні)
     if (!isMobile) {
         if (sidebar && count > 0) sidebar.classList.add('show');
-        const overlay = document.getElementById('bulkOverlay');
-        if (overlay && count > 0) overlay.classList.add('show');
     }
 
     // Ховаємо collapse btn коли bulk sidebar відкритий (тільки PC)
