@@ -210,8 +210,8 @@
         
         /* Main content area */
         .main-content-area { flex: 1; padding: 12px; overflow-y: auto; transition: margin-left 0.3s ease, margin-right 0.3s ease; }
-        .main-content-area.shifted-by-bulk { margin-left: 220px; }
-        /* Коли PC sidebar розгорнутий — зсув не потрібен (bulk sidebar вміщується в зону PC sidebar) */
+        .main-content-area.shifted-by-bulk { margin-left: 300px; }
+        /* Коли PC sidebar розгорнутий — bulk sidebar = 300px = PC sidebar, зсув не потрібен */
         .pc-sidebar:not(.collapsed-sidebar) ~ .main-content-area.shifted-by-bulk { margin-left: 0; }
         @media (max-width: 1099px) {
             .main-content-area.shifted-by-bulk { margin-left: 0; margin-right: 180px; }
@@ -760,18 +760,38 @@
             top: 52px;
             left: 0;
             bottom: 0;
-            width: 220px;
-            background: linear-gradient(180deg, #7f1d1d 0%, #450a0a 100%); 
-            z-index: 200; 
-            box-shadow: 4px 0 20px rgba(0,0,0,0.3); 
+            width: 300px;
+            background: linear-gradient(180deg, #7f1d1d 0%, #450a0a 100%);
+            z-index: 200;
+            box-shadow: 4px 0 20px rgba(0,0,0,0.3);
             transform: translateX(-100%);
             transition: transform 0.3s ease;
             overflow-y: auto;
         }
-        .bulk-actions-sidebar.show { 
-            display: flex; 
+        .bulk-actions-sidebar.show {
+            display: flex;
             flex-direction: column;
             transform: translateX(0);
+        }
+        /* Кнопка Меню у bulk sidebar */
+        .bulk-sidebar-menu-btn {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 12px 14px;
+            border: 1px solid rgba(255,255,255,0.25);
+            border-radius: 8px;
+            background: rgba(255,255,255,0.08);
+            color: rgba(255,255,255,0.85);
+            font-size: 13px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            width: 100%;
+        }
+        .bulk-sidebar-menu-btn:hover {
+            background: rgba(255,255,255,0.18);
+            color: white;
         }
         .bulk-sidebar-header {
             padding: 16px;
@@ -904,43 +924,49 @@
             opacity: 1;
         }
 
-        /* ROUTE PROGRESS */
-        .route-progress-bar {
+        /* ROUTE PROGRESS — centered overlay */
+        .route-progress-overlay {
             position: fixed;
-            top: 52px;
-            left: 0;
-            right: 0;
-            z-index: 1100;
+            top: 0; left: 0; right: 0; bottom: 0;
+            z-index: 1200;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: rgba(0,0,0,0.25);
+            backdrop-filter: blur(2px);
+        }
+        .route-progress-card {
+            background: white;
+            border-radius: 16px;
+            padding: 28px 36px;
+            box-shadow: 0 8px 32px rgba(0,0,0,0.18);
             display: flex;
             flex-direction: column;
             align-items: center;
+            gap: 16px;
+            min-width: 200px;
+            max-width: 280px;
+            animation: routeCardIn 0.3s ease;
         }
-        .route-progress-bar .bar {
-            width: 100%;
-            height: 4px;
-            background: linear-gradient(90deg, #3b82f6, #8b5cf6, #ec4899, #3b82f6);
-            background-size: 300% 100%;
-            animation: routeProgressShimmer 1.2s linear infinite;
+        @keyframes routeCardIn {
+            from { opacity: 0; transform: scale(0.9); }
+            to { opacity: 1; transform: scale(1); }
         }
-        .route-progress-bar .bar-label {
-            margin-top: 8px;
-            background: rgba(30,58,95,0.9);
-            backdrop-filter: blur(8px);
-            color: white;
-            padding: 6px 16px;
-            border-radius: 20px;
-            font-size: 11px;
+        .route-progress-spinner {
+            width: 40px; height: 40px;
+            border: 3px solid var(--border);
+            border-top-color: var(--primary);
+            border-radius: 50%;
+            animation: routeSpin 0.8s linear infinite;
+        }
+        @keyframes routeSpin {
+            to { transform: rotate(360deg); }
+        }
+        .route-progress-text {
+            font-size: 13px;
             font-weight: 600;
-            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
-            animation: routeLabelPulse 2s ease-in-out infinite;
-        }
-        @keyframes routeProgressShimmer {
-            0% { background-position: 300% 0; }
-            100% { background-position: -300% 0; }
-        }
-        @keyframes routeLabelPulse {
-            0%, 100% { opacity: 1; }
-            50% { opacity: 0.7; }
+            color: var(--primary);
+            text-align: center;
         }
         /* ROUTE CONFLICT MODAL - redesigned */
         .route-conflict-overlay {
@@ -1082,13 +1108,14 @@
             .bulk-sidebar-title { font-size: 13px; }
             .bulk-sidebar-count { font-size: 11px; padding: 3px 8px; }
             .bulk-sidebar-actions { padding: 6px; gap: 3px; }
-            .bulk-sidebar-btn { 
-                padding: 10px 12px; 
-                font-size: 12px; 
+            .bulk-sidebar-btn {
+                padding: 10px 12px;
+                font-size: 12px;
                 border-radius: 6px;
             }
             .bulk-sidebar-btn .btn-icon { font-size: 14px; }
             .bulk-sidebar-divider { margin: 6px 0; }
+            .bulk-sidebar-menu-btn { display: none; }
             .bulk-sidebar-close { padding: 8px; }
             .bulk-sidebar-close-btn { padding: 10px; font-size: 12px; }
             .bulk-sidebar-more-toggle { padding: 8px 10px; font-size: 11px; }
@@ -1675,6 +1702,9 @@
         <span class="bulk-sidebar-count"><span id="bulkCountSidebar">0</span> вибрано</span>
     </div>
     <div class="bulk-sidebar-actions">
+        <button class="bulk-sidebar-menu-btn" onclick="switchToMenu()">
+            <span>☰</span> Меню
+        </button>
         <button class="bulk-sidebar-btn" onclick="selectAllVisible()">
             <span class="btn-icon">☑️</span> Вибрати всіх
         </button>
@@ -1721,7 +1751,7 @@
     </div>
     <div class="bulk-sidebar-close">
         <button class="bulk-sidebar-close-btn" onclick="clearSelection()">
-            <span>✕</span> Скасувати вибір
+            <span>✕</span> Закрити
         </button>
     </div>
 </div>
@@ -2046,11 +2076,68 @@ let passengers = [
 // Таблиця маршрутів пасажирів
 const ROUTE_SPREADSHEET_ID = '1iKlD0Bj-5qB3Gc1d5ZBHscbRipcSe5xU7svqBfpB77Y';
 
-let vehicles = [
+const DEFAULT_VEHICLES = [
     {id:'v1', name:'Авто 1', seats:8, routeSheet:'Пас. Маршрут 1'},
     {id:'v2', name:'Авто 2', seats:6, routeSheet:'Пас. Маршрут 2'},
     {id:'v3', name:'Авто 3', seats:8, routeSheet:'Пас. Маршрут 3'}
 ];
+let vehicles = DEFAULT_VEHICLES.map(v => ({...v}));
+
+// Список службових аркушів які НЕ є маршрутами
+const EXCLUDED_SHEETS = ['логи', 'розсилка', 'лог', 'logs', 'mailing', 'провірка'];
+
+function isRouteSheet(name) {
+    return !EXCLUDED_SHEETS.some(ex => name.toLowerCase().includes(ex));
+}
+
+// Синхронізація vehicles з сервера — підтягує нові аркуші, видаляє зниклі
+async function syncVehiclesFromServer() {
+    try {
+        const res = await fetch(ROUTE_API_URL, {
+            method: 'POST',
+            headers: { 'Content-Type': 'text/plain' },
+            body: JSON.stringify({ action: 'getAvailableRoutes' })
+        });
+        const data = await res.json();
+        if (!data.success || !data.routes) return;
+
+        // Фільтруємо лише маршрутні аркуші
+        const serverSheets = data.routes.filter(r => isRouteSheet(r.name));
+
+        // 1) Додаємо нові аркуші яких немає в vehicles
+        for (const sheet of serverSheets) {
+            const exists = vehicles.find(v =>
+                v.routeSheet === sheet.name || v.name === sheet.name
+            );
+            if (!exists) {
+                vehicles.push({
+                    id: 'v' + Date.now() + '_' + Math.random().toString(36).slice(2, 6),
+                    name: sheet.name.replace(/^Пас\.\s*/, ''),
+                    seats: 8,
+                    routeSheet: sheet.name
+                });
+            }
+        }
+
+        // 2) Помічаємо авто чий аркуш зник з сервера (але не видаляємо дефолтні)
+        const serverNames = serverSheets.map(s => s.name);
+        vehicles = vehicles.filter(v => {
+            if (!v.routeSheet) return true; // без аркуша — залишаємо
+            if (serverNames.includes(v.routeSheet)) return true; // є на сервері
+            // Перевіряємо чи це дефолтне авто — залишаємо як fallback
+            if (DEFAULT_VEHICLES.find(d => d.id === v.id)) return true;
+            return false; // аркуш видалено з сервера — прибираємо
+        });
+
+        // Оновлюємо UI
+        updateVehiclesList();
+        updateMobileVehicles();
+        if (typeof updateRoutesList === 'function') updateRoutesList();
+        if (typeof updatePcVehiclesList === 'function') updatePcVehiclesList();
+    } catch (e) {
+        console.error('syncVehiclesFromServer error:', e);
+    }
+}
 let filters = {date:'',vehicle:'',search:'',showArchive:false,statusFilter:'',routeVehicle:'',direction:'all',specialStatus:'',statusDateFrom:'',statusDateTo:'',showNewOnly:true};
 let selectedIds = new Set();
 let editingId = null;
@@ -2075,13 +2162,16 @@ document.addEventListener('DOMContentLoaded', () => {
     render();
     updateVehiclesList();
     updateAllCounts();
-    
+
+    // Синхронізуємо авто з сервера (підтягуємо нові аркуші)
+    syncVehiclesFromServer().then(() => updateAllCounts());
+
     // Перевірка перевищення місткості при завантаженні (з затримкою)
     setTimeout(() => checkAllCapacityWarnings(), 2000);
-    
+
     // Періодична перевірка кожні 5 хвилин
     setInterval(() => checkAllCapacityWarnings(), 300000);
-    
+
     // Тихе авто-оновлення кожні 60 секунд
     setInterval(() => silentSync(), 60000);
 });
@@ -2850,7 +2940,7 @@ function findPassengerByUid(uid) {
 }
 
 // SELECTION & BULK ACTIONS
-function toggleDetails(uid) { 
+function toggleDetails(uid) {
     const p = findPassengerByUid(uid);
     if (p?.isNew) { p.isNew = false; saveSettings(); }
     // Закриваємо дії інших карток
@@ -2865,7 +2955,7 @@ function toggleDetails(uid) {
     document.querySelector(`[data-uid="${uid}"] .new-tag`)?.remove();
 }
 
-function toggleActions(uid) { 
+function toggleActions(uid) {
     // Закриваємо дії інших карток
     if (openActionsId && openActionsId !== uid) {
         document.querySelector(`[data-uid="${openActionsId}"] .card-actions`)?.classList.remove('show');
@@ -2911,7 +3001,9 @@ function clearSelection() {
     document.getElementById('bulkCount').textContent = 0;
     const sidebarCount = document.getElementById('bulkCountSidebar');
     if (sidebarCount) sidebarCount.textContent = 0;
-    // Повертаємо контент і bottom-nav
+    // Повертаємо collapse btn, контент і bottom-nav
+    const collapseBtn = document.getElementById('pcSidebarCollapseBtn');
+    if (collapseBtn) collapseBtn.style.display = '';
     const contentArea = document.querySelector('.main-content-area');
     if (contentArea) contentArea.classList.remove('shifted-by-bulk');
     const bottomNav = document.querySelector('.bottom-nav');
@@ -2919,6 +3011,21 @@ function clearSelection() {
         bottomNav.classList.remove('hidden-by-bulk');
         bottomNav.style.display = '';
     }
+}
+
+function switchToMenu() {
+    // Ховаємо bulk sidebar, показуємо PC sidebar
+    const bulk = document.getElementById('bulkActionsSidebar');
+    if (bulk) bulk.classList.remove('show');
+    const pcSidebar = document.getElementById('pcSidebar');
+    if (pcSidebar) {
+        pcSidebar.classList.remove('collapsed-sidebar');
+        const btn = document.getElementById('pcSidebarCollapseBtn');
+        if (btn) { btn.textContent = '◀'; btn.style.left = '300px'; btn.classList.remove('sidebar-hidden'); btn.style.display = ''; }
+    }
+    // Зсув контенту не потрібен — PC sidebar тепер видимий
+    const contentArea = document.querySelector('.main-content-area');
+    if (contentArea) contentArea.classList.remove('shifted-by-bulk');
 }
 
 function updateBulkBar() {
@@ -2936,6 +3043,10 @@ function updateBulkBar() {
     
     // PC Sidebar - тільки ПОКАЗУЄМО, не ховаємо (ховає clearSelection)
     if (sidebar && count > 0) sidebar.classList.add('show');
+
+    // Ховаємо collapse btn коли bulk sidebar відкритий
+    const collapseBtn = document.getElementById('pcSidebarCollapseBtn');
+    if (collapseBtn) collapseBtn.style.display = count > 0 ? 'none' : '';
 
     // Зсув контенту коли bulk sidebar відкритий
     const contentArea = document.querySelector('.main-content-area');
@@ -3176,8 +3287,10 @@ async function updateAllRoutesCount() {
         const data = await response.json();
         
         if (data.success && data.routes) {
+            // Фільтруємо: тільки аркуші маршрутів (ігноруємо логи, розсилка тощо)
+            const validRoutes = data.routes.filter(r => isRouteSheet(r.name));
             // Рахуємо суму всіх записів
-            const totalCount = data.routes.reduce((sum, r) => sum + (r.count || 0), 0);
+            const totalCount = validRoutes.reduce((sum, r) => sum + (r.count || 0), 0);
             
             // Оновлюємо всі лічильники "Всі маршрути"
             const countRoute = document.getElementById('countRoute');
@@ -3298,7 +3411,15 @@ async function loadAllRoutePassengers() {
         }
         
         if (routesResponse.success && routesResponse.routes && routesResponse.routes.length > 0) {
-            const routes = routesResponse.routes;
+            // Фільтруємо: тільки аркуші маршрутів (ігноруємо логи, розсилка тощо)
+            const routes = routesResponse.routes.filter(r => isRouteSheet(r.name));
+            if (routes.length === 0) {
+                hideLoader();
+                renderRoutePassengers();
+                updateFilterButtons();
+                showToast('📋 Маршрутів не знайдено');
+                return;
+            }
             updateLoader('Завантаження пасажирів...', `0 / ${routes.length}`);
             
             // Паралельно завантажуємо ВСІ маршрути одночасно
@@ -3541,7 +3662,7 @@ function renderRoutePassengers() {
                         <div class="card-vehicle">
                             ${vehicleBadge}
                         </div>
-                        <span class="card-expand-icon">▼</span>
+                        <button class="card-actions-toggle" onclick="event.stopPropagation();toggleRouteActions('${p._uid}')">▼</button>
                     </div>
                 </div>
                 <div class="card-details" id="details_${p._uid}" style="display:none;">
@@ -3561,6 +3682,11 @@ function renderRoutePassengers() {
                     </div>
                     ${p.note ? `<div class="detail-note"><span class="detail-label">📝 Примітка</span><div>${p.note}</div></div>` : ''}
                 </div>
+                <div class="card-actions" id="actions_${p._uid}" style="display:none;">
+                    <button class="btn-card-action btn-call" onclick="event.stopPropagation();location.href='tel:${p.phone}'">📞 Дзвонити</button>
+                    <button class="btn-card-action btn-map" onclick="event.stopPropagation();openRouteMap('${encodeURIComponent(p.from || '')}','${encodeURIComponent(p.to || '')}')">🗺️ Карта</button>
+                    <button class="btn-card-action btn-delete" onclick="event.stopPropagation();showRouteDeleteChoice('${p._uid}')">🗑️ Видалити</button>
+                </div>
             </div>
         `;
     });
@@ -3579,20 +3705,179 @@ function toggleRouteCardDetails(uid) {
     const details = document.getElementById('details_' + uid);
     const card = details?.closest('.lead-card');
     if (!details || !card) return;
-    
+
     const isOpen = details.style.display !== 'none';
-    
-    // Закриваємо всі інші
+
+    // Закриваємо всі інші деталі
     document.querySelectorAll('.card-details').forEach(d => {
         d.style.display = 'none';
         d.closest('.lead-card')?.classList.remove('expanded');
     });
-    
+
     // Відкриваємо/закриваємо поточну
     if (!isOpen) {
         details.style.display = 'block';
         card.classList.add('expanded');
     }
+}
+
+// Розгортання дій картки маршруту (▼ кнопка)
+function toggleRouteActions(uid) {
+    const actions = document.getElementById('actions_' + uid);
+    const card = actions?.closest('.lead-card');
+    if (!actions || !card) return;
+
+    const isOpen = actions.style.display !== 'none';
+
+    // Закриваємо всі інші дії
+    document.querySelectorAll('.card-actions[id^="actions_route"]').forEach(a => {
+        a.style.display = 'none';
+        a.closest('.lead-card')?.querySelector('.card-actions-toggle')?.classList.remove('open');
+    });
+
+    // Відкриваємо/закриваємо поточну
+    if (!isOpen) {
+        actions.style.display = 'grid';
+        card.querySelector('.card-actions-toggle')?.classList.add('open');
+    }
+}
+
+// Відкрити Google Maps для маршрутного пасажира
+function openRouteMap(fromEncoded, toEncoded) {
+    const from = decodeURIComponent(fromEncoded);
+    const to = decodeURIComponent(toEncoded);
+    if (from && to) {
+        window.open(`https://www.google.com/maps/dir/?api=1&origin=${encodeURIComponent(from)}&destination=${encodeURIComponent(to)}`, '_blank');
+    } else if (from) {
+        window.open(`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(from)}`, '_blank');
+    } else if (to) {
+        window.open(`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(to)}`, '_blank');
+    } else {
+        showToast('⚠️ Немає адреси');
+    }
+}
+
+// Вибір типу видалення в маршруті
+function showRouteDeleteChoice(uid) {
+    const p = routePassengers.find(rp => rp._uid === uid);
+    if (!p) return;
+
+    document.getElementById('routeDeleteChoiceModal')?.remove();
+
+    const modal = document.createElement('div');
+    modal.className = 'modal-overlay show';
+    modal.id = 'routeDeleteChoiceModal';
+    modal.innerHTML = `
+        <div class="modal" style="max-width:380px;">
+            <div class="modal-header" style="background:#fee2e2;border-bottom:1px solid #fecaca;">
+                <span class="modal-title" style="color:#dc2626;">🗑️ Видалити</span>
+                <button class="modal-close" onclick="document.getElementById('routeDeleteChoiceModal').remove()">✕</button>
+            </div>
+            <div class="modal-body" style="padding:20px;">
+                <div style="text-align:center;margin-bottom:16px;">
+                    <div style="font-size:14px;font-weight:600;">${p.name || 'Без імені'}</div>
+                    <div style="font-size:12px;color:var(--text-secondary);">${p.phone || '—'}</div>
+                </div>
+                <div style="display:flex;flex-direction:column;gap:10px;">
+                    <button onclick="deleteFromRouteOnly('${uid}')" style="padding:14px;border:none;border-radius:10px;background:#f59e0b;color:white;font-weight:600;font-size:13px;cursor:pointer;">
+                        📋 Видалити з маршруту<br>
+                        <span style="font-size:11px;font-weight:400;opacity:0.9;">Лід залишиться в головному списку</span>
+                    </button>
+                    <button onclick="deleteFromRouteAndTrash('${uid}')" style="padding:14px;border:none;border-radius:10px;background:#dc2626;color:white;font-weight:600;font-size:13px;cursor:pointer;">
+                        🗑️ Видалити в корзину<br>
+                        <span style="font-size:11px;font-weight:400;opacity:0.9;">Лід буде архівовано</span>
+                    </button>
+                </div>
+            </div>
+        </div>
+    `;
+    document.body.appendChild(modal);
+}
+
+// Видалити тільки з маршруту (лід залишається в основному списку)
+function deleteFromRouteOnly(uid) {
+    document.getElementById('routeDeleteChoiceModal')?.remove();
+    const p = routePassengers.find(rp => rp._uid === uid);
+    if (!p) return;
+
+    const sheetName = currentRouteVehicle?.routeSheet || p._vehicleName;
+    if (!sheetName) return showToast('❌ Невідомий аркуш маршруту');
+
+    showRouteProgress('Видаляю з маршруту...');
+
+    fetch(ROUTE_API_URL, {
+        method: 'POST',
+        headers: { 'Content-Type': 'text/plain' },
+        body: JSON.stringify({
+            action: 'deleteRoutePassenger',
+            payload: { sheetName: sheetName, passengerId: String(p.id) }
+        })
+    })
+    .then(r => r.json())
+    .then(data => {
+        hideRouteProgress();
+        if (data.success) {
+            // Видаляємо з локального масиву
+            routePassengers = routePassengers.filter(rp => rp._uid !== uid);
+            routeStats.total = routePassengers.length;
+            renderRoutePassengers();
+            updateAllCounts();
+            showToast('📋 Видалено з маршруту');
+        } else {
+            showToast('❌ ' + (data.error || 'Помилка'));
+        }
+    })
+    .catch(err => {
+        hideRouteProgress();
+        console.error('deleteFromRouteOnly error:', err);
+        showToast('❌ Помилка видалення');
+    });
+}
+
+// Видалити з маршруту + в архів (корзину)
+function deleteFromRouteAndTrash(uid) {
+    document.getElementById('routeDeleteChoiceModal')?.remove();
+    const p = routePassengers.find(rp => rp._uid === uid);
+    if (!p) return;
+
+    const sheetName = currentRouteVehicle?.routeSheet || p._vehicleName;
+    if (!sheetName) return showToast('❌ Невідомий аркуш маршруту');
+
+    showRouteProgress('Видаляю...');
+
+    // 1) Видаляємо з маршруту
+    fetch(ROUTE_API_URL, {
+        method: 'POST',
+        headers: { 'Content-Type': 'text/plain' },
+        body: JSON.stringify({
+            action: 'deleteRoutePassenger',
+            payload: { sheetName: sheetName, passengerId: String(p.id) }
+        })
+    })
+    .then(r => r.json())
+    .then(data => {
+        // 2) Архівуємо в головному списку
+        const mainPassenger = passengers.find(mp => String(mp.id) === String(p.id));
+        if (mainPassenger) {
+            mainPassenger.status = 'archived';
+            mainPassenger.archiveDate = new Date().toISOString().split('T')[0];
+            updatePassengerOnServer(mainPassenger);
+            saveSettings();
+        }
+
+        hideRouteProgress();
+        // Видаляємо з локального масиву маршруту
+        routePassengers = routePassengers.filter(rp => rp._uid !== uid);
+        routeStats.total = routePassengers.length;
+        renderRoutePassengers();
+        updateAllCounts();
+        showToast('🗑️ Видалено в корзину');
+    })
+    .catch(err => {
+        hideRouteProgress();
+        console.error('deleteFromRouteAndTrash error:', err);
+        showToast('❌ Помилка видалення');
+    });
 }
 
 // Оновити кількість в маршрутах (викликається при відкритті dropdown)
@@ -3869,8 +4154,8 @@ function bulkAssignVehicle(vehicleId) {
     });
     saveSettings();
     closeModal('bulkVehicleModal');
-    clearSelection();
     render();
+    updateBulkBar();
     updateAllCounts();
     updateVehiclesList();
     showToast(`🚐 ${veh.name} призначено: ${count}`);
@@ -3936,26 +4221,26 @@ function toggleBulkSecondary() {
     }
 }
 
-// Route progress bar helpers
+// Route progress overlay helpers
 function showRouteProgress(text) {
-    let bar = document.getElementById('routeProgressBar');
-    if (!bar) {
-        bar = document.createElement('div');
-        bar.className = 'route-progress-bar';
-        bar.id = 'routeProgressBar';
-        bar.innerHTML = '<div class="bar"></div><div class="bar-label"></div>';
-        document.body.appendChild(bar);
+    let el = document.getElementById('routeProgressOverlay');
+    if (!el) {
+        el = document.createElement('div');
+        el.className = 'route-progress-overlay';
+        el.id = 'routeProgressOverlay';
+        el.innerHTML = '<div class="route-progress-card"><div class="route-progress-spinner"></div><div class="route-progress-text"></div></div>';
+        document.body.appendChild(el);
     }
-    bar.querySelector('.bar-label').textContent = text || 'Обробка маршруту...';
-    bar.style.display = 'flex';
+    el.querySelector('.route-progress-text').textContent = text || 'Обробка маршруту...';
+    el.style.display = 'flex';
 }
 function hideRouteProgress() {
-    const bar = document.getElementById('routeProgressBar');
-    if (bar) bar.style.display = 'none';
+    const el = document.getElementById('routeProgressOverlay');
+    if (el) el.style.display = 'none';
 }
 function updateRouteProgress(text) {
-    const bar = document.getElementById('routeProgressBar');
-    if (bar) bar.querySelector('.bar-label').textContent = text;
+    const el = document.getElementById('routeProgressOverlay');
+    if (el) el.querySelector('.route-progress-text').textContent = text;
 }
 
 // Модалка конфлікту маршрутів - redesigned as bottom sheet
@@ -4052,8 +4337,8 @@ function executeCopyToRoute(byVehicle, withVehicle, conflictAction) {
                 p.mark = 'Маршрут';
             });
             saveSettings();
-            clearSelection();
             render();
+            updateBulkBar();
             updateAllCounts();
 
             let msg = `🚀 ${data.copied} записано в маршрут`;
@@ -4390,18 +4675,31 @@ function getStatusName(status) {
 
 // SELECT ALL VISIBLE
 function selectAllVisible() {
-    const data = getFilteredData();
-    const visibleUids = data.map((p, idx) => 
-        (p._sheet && p._rowNum) ? `${p._sheet}_${p._rowNum}` : `local_${idx}`
-    );
-    
+    // Визначаємо чи ми в режимі маршруту
+    const isRouteView = filters.statusFilter === 'route' && filters.routeVehicle;
+
+    let visibleUids;
+    if (isRouteView && routePassengers.length > 0) {
+        // В маршруті — використовуємо routePassengers
+        visibleUids = routePassengers.map(p => p._uid);
+    } else {
+        const data = getFilteredData();
+        visibleUids = data.map((p, idx) =>
+            (p._sheet && p._rowNum) ? `${p._sheet}_${p._rowNum}` : `local_${idx}`
+        );
+    }
+
     // Перевіряємо чи всі вже вибрані
     const allSelected = visibleUids.every(uid => selectedIds.has(uid));
-    
+
     if (allSelected) {
         // Знімаємо всі галочки (але НЕ ховаємо sidebar)
         visibleUids.forEach(uid => selectedIds.delete(uid));
-        render();
+        if (isRouteView) {
+            renderRoutePassengers();
+        } else {
+            render();
+        }
         // Оновлюємо тільки лічильники, НЕ ховаємо панель
         document.getElementById('bulkCount').textContent = selectedIds.size;
         const sidebarCount = document.getElementById('bulkCountSidebar');
@@ -4410,7 +4708,11 @@ function selectAllVisible() {
     } else {
         // Ставимо всі галочки
         visibleUids.forEach(uid => selectedIds.add(uid));
-        render();
+        if (isRouteView) {
+            renderRoutePassengers();
+        } else {
+            render();
+        }
         updateBulkBar();
         showToast(`☑️ Вибрано ${visibleUids.length}`);
     }
@@ -4895,8 +5197,8 @@ function applyOptimizedOrder(orderedPassengers, notGeocodedList) {
     });
     
     saveSettings();
-    clearSelection();
     render();
+    updateBulkBar();
     updateAllCounts();
 }
 
@@ -5719,17 +6021,53 @@ function closeTagModal() {
     document.getElementById('tagModal').classList.remove('show');
 }
 
+function tagErrorText(code) {
+    const map = {
+        'E01': 'Помилка запиту (E01)',
+        'E02': 'Немає ID контакту (E02)',
+        'E03': 'Немає назви тегу (E03)',
+        'E10': 'Сервер тегів недоступний (E10)',
+        'E11': 'Помилка пошуку тегу (E11)',
+        'E20': 'Сервер тегів недоступний (E20)',
+        'E21': 'Не вдалось створити тег (E21)',
+        'E22': 'Тег існує, але не знайдено (E22)',
+        'E30': 'Smart Sender недоступний (E30)',
+        'E31': 'Контакт не знайдено в SS (E31)',
+        'E32': 'Помилка перевірки контакту (E32)',
+        'E40': 'Не вдалось повісити тег (E40)',
+        'E41': 'Контакт або тег не знайдено (E41)',
+        'E42': 'Помилка привʼязки тегу (E42)'
+    };
+    return map[code] || 'Невідома помилка (' + code + ')';
+}
+
 async function startTagging() {
     const tagName = document.getElementById('tagNameInput').value.trim();
     if (!tagName) return showToast('⚠️ Введіть назву тегу');
 
+    // Збираємо всіх з перевіркою на немає ІД та дублі
     const items = [];
+    const noId = [];
+    const seenIds = new Set();
+    const dupes = [];
+
     selectedIds.forEach(uid => {
         const p = findPassengerByUid(uid);
-        if (p && p.id) items.push({ userId: p.id, name: p.name || '—' });
+        if (!p) return;
+        const name = p.name || '—';
+        if (!p.id) {
+            noId.push(name);
+            return;
+        }
+        if (seenIds.has(String(p.id))) {
+            dupes.push(name + ' (ІД ' + p.id + ')');
+            return;
+        }
+        seenIds.add(String(p.id));
+        items.push({ userId: p.id, name: name });
     });
 
-    if (items.length === 0) return showToast('⚠️ У вибраних пасажирів немає ІД');
+    if (items.length === 0 && noId.length === 0 && dupes.length === 0) return showToast('⚠️ Нікого не вибрано');
 
     // UI → прогрес
     document.getElementById('tagFormBody').style.display = 'none';
@@ -5743,9 +6081,38 @@ async function startTagging() {
     bar.style.width = '0%';
     bar.style.background = '#7c3aed';
 
-    let ok = 0, fail = 0;
+    let ok = 0, fail = 0, skip = 0;
     tagLog(logEl, '🏷️ Тег: "' + tagName + '"');
-    tagLog(logEl, '👥 Пасажирів: ' + items.length);
+    tagLog(logEl, '👥 Вибрано: ' + selectedIds.size + ' | До тегування: ' + items.length);
+
+    // Логуємо пасажирів без ІД
+    if (noId.length > 0) {
+        tagLog(logEl, '─'.repeat(30));
+        noId.forEach(name => {
+            tagLog(logEl, '⛔ ' + name + ' — Немає ІД в системі');
+            fail++;
+        });
+    }
+
+    // Логуємо дублі
+    if (dupes.length > 0) {
+        tagLog(logEl, '─'.repeat(30));
+        dupes.forEach(d => {
+            tagLog(logEl, '🔁 ' + d + ' — Дубль ІД, пропущено');
+            skip++;
+        });
+    }
+
+    if (items.length === 0) {
+        tagLog(logEl, '─'.repeat(30));
+        tagLog(logEl, '📊 Нікого тегувати — всі без ІД або дублі');
+        bar.style.width = '100%';
+        bar.style.background = 'var(--warning)';
+        txt.textContent = '⚠️ Нікого тегувати';
+        document.getElementById('tagResultFooter').style.display = '';
+        return;
+    }
+
     tagLog(logEl, '─'.repeat(30));
 
     for (let i = 0; i < items.length; i++) {
@@ -5762,17 +6129,18 @@ async function startTagging() {
             const data = await res.json();
 
             if (data.error) {
-                tagLog(logEl, '❌ ІД ' + item.userId + ' (' + item.name + ') — ' + data.error);
+                tagLog(logEl, '❌ ' + item.name + ' — ' + tagErrorText(data.error));
                 fail++;
             } else if (data.state === true || data.id || data.tagId) {
-                tagLog(logEl, '✅ ІД ' + item.userId + ' (' + item.name + ') — OK');
+                const note = data.note === 'already_tagged' ? ' (вже був)' : '';
+                tagLog(logEl, '✅ ' + item.name + ' — OK' + note);
                 ok++;
             } else {
-                tagLog(logEl, '⚠️ ІД ' + item.userId + ' (' + item.name + ') — ' + JSON.stringify(data));
+                tagLog(logEl, '⚠️ ' + item.name + ' — Невідома відповідь (EUNK)');
                 fail++;
             }
         } catch(e) {
-            tagLog(logEl, '❌ ІД ' + item.userId + ' (' + item.name + ') — ' + e.message);
+            tagLog(logEl, '❌ ' + item.name + ' — Немає зв\'язку (ENET)');
             fail++;
         }
 
@@ -5780,16 +6148,20 @@ async function startTagging() {
     }
 
     tagLog(logEl, '─'.repeat(30));
-    tagLog(logEl, '📊 Результат: ✅ ' + ok + ' успішно, ❌ ' + fail + ' помилок');
+    let summary = '📊 ✅' + ok;
+    if (fail > 0) summary += ' ❌' + fail;
+    if (skip > 0) summary += ' 🔁' + skip;
+    tagLog(logEl, summary);
 
-    txt.textContent = fail === 0
-        ? '✅ Протеговано ' + ok + ' пасажирів!'
-        : '⚠️ Готово: ' + ok + ' ✅ / ' + fail + ' ❌';
+    const allGood = fail === 0 && skip === 0 && noId.length === 0;
+    txt.textContent = allGood
+        ? '✅ Протеговано ' + ok + '!'
+        : '⚠️ ✅' + ok + (fail > 0 ? ' ❌' + fail : '') + (skip > 0 ? ' 🔁' + skip : '');
     bar.style.width = '100%';
-    bar.style.background = fail === 0 ? 'var(--success)' : 'var(--warning)';
+    bar.style.background = allGood ? 'var(--success)' : 'var(--warning)';
     document.getElementById('tagResultFooter').style.display = '';
 
-    showToast(fail === 0 ? '🏷️ Протеговано: ' + ok : '🏷️ ' + ok + ' ✅ / ' + fail + ' ❌');
+    showToast(allGood ? '🏷️ Протеговано: ' + ok : '🏷️ ✅' + ok + (fail > 0 ? ' ❌' + fail : '') + (skip > 0 ? ' 🔁' + skip : ''));
 }
 
 function tagLog(el, text) {

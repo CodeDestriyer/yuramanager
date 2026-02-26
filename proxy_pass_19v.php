@@ -1,6 +1,20 @@
 <?php
-// Smart Sender API Proxy v4
-// SHUKAJ - STVORY - PEREVIRJ KONTAKT - POVISY
+// Smart Sender API Proxy v5
+// Kody pomylok:
+// E01 - nevalidnij JSON vhid
+// E02 - userId porozhnij
+// E03 - tagName porozhnij
+// E10 - poshuk tegu: zʼyednannya
+// E11 - poshuk tegu: HTTP pomylka
+// E20 - stvorennya tegu: zʼyednannya
+// E21 - stvorennya tegu: HTTP pomylka
+// E22 - teg isnuje ale ne znajdeno
+// E30 - kontakt: zʼyednannya
+// E31 - kontakt ne isnuje v Smart Sender
+// E32 - kontakt: HTTP pomylka
+// E40 - pryviazka tegu: zʼyednannya
+// E41 - kontakt abo teg ne znajdeno (404)
+// E42 - pryviazka tegu: HTTP pomylka
 
 header("Access-Control-Allow-Origin: *");
 header("Access-Control-Allow-Methods: POST, OPTIONS");
@@ -36,111 +50,99 @@ function ssApi($method, $url, $token, $body = null) {
     $info = [
         'httpCode' => curl_getinfo($ch, CURLINFO_HTTP_CODE),
         'curlError' => curl_error($ch),
-        'raw' => $res,
         'data' => json_decode($res, true)
     ];
     curl_close($ch);
     return $info;
 }
 
-$input = json_decode(file_get_contents('php://input'), true);
-if (!$input) {
-    echo json_encode(['error' => 'Nevalidnij JSON. Otrimano: ' . file_get_contents('php://input')]);
+function fail($code) {
+    echo json_encode(['error' => $code]);
     exit;
 }
+
+$input = json_decode(file_get_contents('php://input'), true);
+if (!$input) fail('E01');
 
 $userId  = isset($input['userId'])  ? trim($input['userId'])  : '';
 $tagName = isset($input['tagName']) ? trim($input['tagName']) : '';
 
-if (empty($userId)) { echo json_encode(['error' => 'userId porozhnij']); exit; }
-if (empty($tagName)) { echo json_encode(['error' => 'tagName porozhnij']); exit; }
+if (empty($userId))  fail('E02');
+if (empty($tagName)) fail('E03');
 
-// KROK 1: SHUKAJEMO teg
-$tagId = null;
-$step = 'KROK 1: Poshuk tegu';
+// Poshuk tegu po vsih storinkah
+function findTagByName($tagName, $token) {
+    $page = 1;
+    $maxPages = 10;
+    do {
+        $r = ssApi('GET', 'https://api.smartsender.com/v1/tags?term=' . urlencode($tagName) . '&page=' . $page . '&limitation=50', $token);
+        if ($r['curlError']) return ['error' => 'E10'];
+        if ($r['httpCode'] < 200 || $r['httpCode'] >= 300) return ['error' => 'E11'];
 
-$r1 = ssApi('GET', 'https://api.smartsender.com/v1/tags?term=' . urlencode($tagName) . '&page=1&limitation=20', $token);
+        $collection = [];
+        if (isset($r['data']['collection'])) $collection = $r['data']['collection'];
+        elseif (isset($r['data']['data'])) $collection = $r['data']['data'];
+        elseif (is_array($r['data'])) $collection = $r['data'];
 
-if ($r1['curlError']) { echo json_encode(['error' => $step . ' cURL: ' . $r1['curlError']]); exit; }
-if ($r1['httpCode'] < 200 || $r1['httpCode'] >= 300) {
-    echo json_encode(['error' => $step . ' HTTP ' . $r1['httpCode'] . ': ' . $r1['raw']]);
-    exit;
+        foreach ($collection as $tag) {
+            if (isset($tag['name']) && strtolower(trim($tag['name'])) === strtolower(trim($tagName))) {
+                return ['id' => $tag['id']];
+            }
+        }
+
+        $totalPages = isset($r['data']['cursor']['pages']) ? (int)$r['data']['cursor']['pages'] : 1;
+        $page++;
+    } while ($page <= $totalPages && $page <= $maxPages);
+
+    return ['id' => null];
 }
 
-$collection = [];
-if (isset($r1['data']['collection'])) $collection = $r1['data']['collection'];
-elseif (isset($r1['data']['data'])) $collection = $r1['data']['data'];
-elseif (is_array($r1['data'])) $collection = $r1['data'];
+// KROK 1: Shukajemo teg
+$found = findTagByName($tagName, $token);
+if (isset($found['error'])) fail($found['error']);
+$tagId = $found['id'];
 
-foreach ($collection as $tag) {
-    if (isset($tag['name']) && strtolower(trim($tag['name'])) === strtolower(trim($tagName))) {
-        $tagId = $tag['id'];
-        break;
-    }
-}
-
-// KROK 2: Yakshcho ne znajshly - STVORYUJEMO
+// KROK 2: Stvoryujemo teg yakshcho ne znajshly
 if (!$tagId) {
-    $step = 'KROK 2: Stvorennya tegu';
     $r2 = ssApi('POST', 'https://api.smartsender.com/v1/tags', $token, [
         'name' => $tagName,
         'color' => 'FF0000'
     ]);
 
-    if ($r2['curlError']) { echo json_encode(['error' => $step . ' cURL: ' . $r2['curlError']]); exit; }
+    if ($r2['curlError']) fail('E20');
 
     if (isset($r2['data']['id'])) {
         $tagId = $r2['data']['id'];
     } elseif ($r2['httpCode'] === 422 || $r2['httpCode'] === 409) {
         usleep(500000);
-        $r2b = ssApi('GET', 'https://api.smartsender.com/v1/tags?term=' . urlencode($tagName) . '&page=1&limitation=20', $token);
-        $col2 = [];
-        if (isset($r2b['data']['collection'])) $col2 = $r2b['data']['collection'];
-        elseif (isset($r2b['data']['data'])) $col2 = $r2b['data']['data'];
-        elseif (is_array($r2b['data'])) $col2 = $r2b['data'];
-
-        foreach ($col2 as $tag) {
-            if (isset($tag['name']) && strtolower(trim($tag['name'])) === strtolower(trim($tagName))) {
-                $tagId = $tag['id'];
-                break;
-            }
-        }
-        if (!$tagId) {
-            echo json_encode(['error' => $step . ' Teg isnuje ale ne znajdeno. CREATE: ' . $r2['raw'] . ' | SEARCH: ' . $r2b['raw']]);
-            exit;
-        }
+        $found2 = findTagByName($tagName, $token);
+        if (isset($found2['error'])) fail($found2['error']);
+        $tagId = $found2['id'];
+        if (!$tagId) fail('E22');
     } else {
-        $msg = isset($r2['data']['message']) ? $r2['data']['message'] : $r2['raw'];
-        echo json_encode(['error' => $step . ' HTTP ' . $r2['httpCode'] . ': ' . $msg]);
-        exit;
+        fail('E21');
     }
 }
 
-// KROK 3: PEREVIRYAJEMO kontakt
-$step = 'KROK 3: Perevirka kontaktu';
+// KROK 3: Pereviryajemo kontakt
 $r3 = ssApi('GET', 'https://api.smartsender.com/v1/contacts/' . urlencode($userId), $token);
 
-if ($r3['curlError']) { echo json_encode(['error' => $step . ' cURL: ' . $r3['curlError']]); exit; }
-if ($r3['httpCode'] === 404) { echo json_encode(['error' => 'Kontakt ID ' . $userId . ' NE ISNUJE v Smart Sender']); exit; }
-if ($r3['httpCode'] < 200 || $r3['httpCode'] >= 300) {
-    echo json_encode(['error' => $step . ' HTTP ' . $r3['httpCode'] . ': ' . $r3['raw']]);
-    exit;
-}
+if ($r3['curlError']) fail('E30');
+if ($r3['httpCode'] === 404) fail('E31');
+if ($r3['httpCode'] < 200 || $r3['httpCode'] >= 300) fail('E32');
 
-// KROK 4: VISHAJEMO teg na kontakt
-$step = 'KROK 4: Privyazka tegu';
+// KROK 4: Vishajemo teg
 $r4 = ssApi('POST', 'https://api.smartsender.com/v1/contacts/' . urlencode($userId) . '/tags/' . urlencode($tagId), $token);
 
-if ($r4['curlError']) { echo json_encode(['error' => $step . ' cURL: ' . $r4['curlError']]); exit; }
+if ($r4['curlError']) fail('E40');
 
 if ($r4['httpCode'] >= 200 && $r4['httpCode'] < 300) {
     echo json_encode(['state' => true, 'tagId' => $tagId, 'userId' => $userId, 'tagName' => $tagName]);
 } elseif ($r4['httpCode'] === 404) {
-    echo json_encode(['error' => $step . ' Kontakt abo teg ne znajdeno (404). userId=' . $userId . ', tagId=' . $tagId]);
+    fail('E41');
 } elseif ($r4['httpCode'] === 422) {
-    echo json_encode(['state' => true, 'tagId' => $tagId, 'userId' => $userId, 'tagName' => $tagName, 'note' => 'Teg vzhe buv privyazanij']);
+    echo json_encode(['state' => true, 'tagId' => $tagId, 'userId' => $userId, 'tagName' => $tagName, 'note' => 'already_tagged']);
 } else {
-    $msg = isset($r4['data']['message']) ? $r4['data']['message'] : $r4['raw'];
-    echo json_encode(['error' => $step . ' HTTP ' . $r4['httpCode'] . ': ' . $msg]);
+    fail('E42');
 }
 ?>
