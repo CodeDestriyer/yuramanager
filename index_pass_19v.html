@@ -2562,22 +2562,16 @@ function renderCalendarTo(containerId) {
     const months = ['Січень','Лютий','Березень','Квітень','Травень','Червень','Липень','Серпень','Вересень','Жовтень','Листопад','Грудень'];
     const today = new Date().toISOString().split('T')[0];
     
-    // Рахуємо ліди на дату (з урахуванням напрямку) + місця ВСІХ напрямків (для overbooked)
+    // Рахуємо ліди та місця на дату (з урахуванням напрямку)
     const seatCounts = {};
     const leadCounts = {};
     const hiddenInCalendar = ['archived', 'refused', 'transferred', 'deleted'];
     const dir = filters.direction;
-    const activePassengers = passengers.filter(p => !hiddenInCalendar.includes(p.status));
-    // Місця — ЗАВЖДИ всі напрямки (авто спільні, місткість загальна)
-    activePassengers.forEach(p => {
-        if(p.date) {
-            seatCounts[p.date] = (seatCounts[p.date]||0) + (parseInt(p.seats) || 1);
-        }
-    });
-    // Ліди — з фільтром напрямку (для badge кількості)
-    activePassengers.filter(p => !dir || dir === 'all' || p.direction === dir).forEach(p => {
+    const filteredPassengers = passengers.filter(p => !hiddenInCalendar.includes(p.status)).filter(p => !dir || dir === 'all' || p.direction === dir);
+    filteredPassengers.forEach(p => {
         if(p.date) {
             leadCounts[p.date] = (leadCounts[p.date]||0) + 1;
+            seatCounts[p.date] = (seatCounts[p.date]||0) + (parseInt(p.seats) || 1);
         }
     });
     
@@ -2659,28 +2653,32 @@ function selectDate(dateStr) {
     }
 }
 
-// Перевірка місткості на дату (при виборі)
+// Перевірка місткості на дату (при виборі) — з урахуванням напрямку
 function checkCapacityWarning(dateStr) {
     const totalCapacity = vehicles.reduce((sum, v) => sum + (parseInt(v.seats) || 8), 0);
     const closedStatuses = ['archived', 'refused', 'transferred', 'deleted'];
+    const dir = filters.direction;
     const seatsOnDate = passengers
         .filter(p => p.date === dateStr && !closedStatuses.includes(p.status))
+        .filter(p => !dir || dir === 'all' || p.direction === dir)
         .reduce((sum, p) => sum + (parseInt(p.seats) || 1), 0);
 
     if (seatsOnDate > totalCapacity) {
         const dateFormatted = new Date(dateStr).toLocaleDateString('uk-UA');
-        showCapacityWarning(dateFormatted, seatsOnDate, totalCapacity);
+        const dirLabel = dir === 'ua-eu' ? ' (🇺🇦→🇪🇺)' : dir === 'eu-ua' ? ' (🇪🇺→🇺🇦)' : '';
+        showCapacityWarning(dateFormatted + dirLabel, seatsOnDate, totalCapacity);
     }
 }
 
-// Перевірка всіх дат на перевищення (при завантаженні та періодично)
+// Перевірка всіх дат на перевищення (при завантаженні та періодично) — з урахуванням напрямку
 function checkAllCapacityWarnings() {
     const totalCapacity = vehicles.reduce((sum, v) => sum + (parseInt(v.seats) || 8), 0);
     if (totalCapacity === 0) return;
 
     const closedStatuses = ['archived', 'refused', 'transferred', 'deleted'];
+    const dir = filters.direction;
     const seatsByDate = {};
-    passengers.filter(p => !closedStatuses.includes(p.status) && p.date).forEach(p => {
+    passengers.filter(p => !closedStatuses.includes(p.status) && p.date).filter(p => !dir || dir === 'all' || p.direction === dir).forEach(p => {
         seatsByDate[p.date] = (seatsByDate[p.date] || 0) + (parseInt(p.seats) || 1);
     });
 
