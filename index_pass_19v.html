@@ -1048,7 +1048,7 @@
                 <span class="section-toggle" id="toggleDirection">▼</span>
             </div>
             <div class="side-menu-collapsible" id="mobileDirectionSection">
-                <div class="side-menu-item" id="mobileNewLeads" onclick="showNewLeads(); closeSideMenu();" style="background:rgba(0,0,0,0.4);">
+                <div class="side-menu-item" id="mobileNewLeads" onclick="showNewLeads(); closeSideMenu();" style="background:rgba(59,130,246,0.25);">
                     <span class="side-menu-item-left" style="color:white;font-weight:700;">🆕 Нові (24 год)</span>
                     <span class="side-menu-item-count" id="mobileCountNew" style="background:var(--accent);color:white;">0</span>
                 </div>
@@ -1166,8 +1166,8 @@
                 <span class="pc-sidebar-toggle" id="pcToggleDirection">▼</span>
             </div>
             <div class="pc-sidebar-content" id="pcSectionDirection">
-                <div class="pc-sidebar-item" id="pcNewLeads" onclick="showNewLeads()" style="color:#000000;">
-                    <span style="color:#000000;"><span class="item-icon">🆕</span>Нові (24 год)</span>
+                <div class="pc-sidebar-item" id="pcNewLeads" onclick="showNewLeads()" style="background:rgba(59,130,246,0.08);color:var(--primary);">
+                    <span><span class="item-icon">🆕</span>Нові (24 год)</span>
                     <span class="item-count" id="pcCountNew" style="background:var(--accent);color:white;">0</span>
                 </div>
                 <div class="pc-sidebar-item" id="pcDirectionAll" onclick="setDirection('all')">
@@ -1566,7 +1566,7 @@
         </div>
         <div class="modal-footer">
             <button class="btn-cancel" onclick="closeModal('bulkVehicleModal')">Скасувати</button>
-            <button class="btn-save" id="bulkVehicleConfirmBtn" onclick="confirmBulkAssignVehicle()" style="display:none;">🚐 Призначити</button>
+            <button class="btn-save" id="bulkVehicleConfirmBtn" onclick="confirmBulkAssignVehicle()" disabled style="opacity:0.5;">🚐 Призначити</button>
         </div>
     </div>
 </div>
@@ -2293,7 +2293,7 @@ function showCapacityWarning(date, seats, capacity) {
             </div>
             <div class="modal-footer">
                 <button class="btn-secondary" onclick="document.getElementById('capacityWarningModal').remove()">Зрозуміло</button>
-                <button class="btn-save" onclick="document.getElementById('capacityWarningModal').remove();openVehicleModal()">➕ Додати авто</button>
+                <button class="btn-save" onclick="document.getElementById('capacityWarningModal').remove();openAddVehicleModal()">➕ Додати авто</button>
             </div>
         </div>
     `;
@@ -3538,9 +3538,11 @@ function openBulkVehicleModal() {
     selectedBulkVehicleId = null;
     document.getElementById('bulkVehicleCount').textContent = selectedIds.size;
     document.getElementById('bulkVehicleList').innerHTML = vehicles.map(v =>
-        `<div class="vehicle-select-item" id="vsi_${v.id}" onclick="selectBulkVehicle('${v.id}')"><span class="vehicle-select-name">🚐 ${v.name}</span><span class="vehicle-select-info">${v.seats} місць</span></div>`
+        `<div class="vehicle-select-item" id="vsi_${v.id}" onclick="selectBulkVehicle('${v.id}')" style="cursor:pointer;border:2px solid transparent;transition:all 0.2s;"><span class="vehicle-select-name">🚐 ${v.name}</span><span class="vehicle-select-info">${v.seats} місць</span></div>`
     ).join('');
-    document.getElementById('bulkVehicleConfirmBtn').style.display = 'none';
+    const confirmBtn = document.getElementById('bulkVehicleConfirmBtn');
+    confirmBtn.disabled = true;
+    confirmBtn.style.opacity = '0.5';
     document.getElementById('bulkVehicleModal').classList.add('show');
 }
 
@@ -3548,16 +3550,18 @@ function selectBulkVehicle(vehicleId) {
     selectedBulkVehicleId = vehicleId;
     // Підсвічуємо вибране авто
     document.querySelectorAll('#bulkVehicleList .vehicle-select-item').forEach(el => {
-        el.style.borderColor = '';
+        el.style.borderColor = 'transparent';
         el.style.background = '';
     });
-    const selected = document.getElementById('vsi_' + vehicleId);
-    if (selected) {
-        selected.style.borderColor = 'var(--info)';
-        selected.style.background = '#f0f7ff';
+    const selectedEl = document.getElementById('vsi_' + vehicleId);
+    if (selectedEl) {
+        selectedEl.style.borderColor = 'var(--info)';
+        selectedEl.style.background = '#f0f7ff';
     }
-    // Показуємо кнопку підтвердження
-    document.getElementById('bulkVehicleConfirmBtn').style.display = 'inline-block';
+    // Активуємо кнопку підтвердження
+    const confirmBtn = document.getElementById('bulkVehicleConfirmBtn');
+    confirmBtn.disabled = false;
+    confirmBtn.style.opacity = '1';
 }
 
 function confirmBulkAssignVehicle() {
@@ -3566,12 +3570,14 @@ function confirmBulkAssignVehicle() {
 }
 
 function bulkAssignVehicle(vehicleId) {
-    saveForUndo('vehicle');
+    const veh = vehicles.find(v => v.id === vehicleId);
+    if (!veh) return showToast('❌ Авто не знайдено');
+
     let count = 0;
     selectedIds.forEach(uid => {
         const p = findPassengerByUid(uid);
         if (p && p.status !== 'archived') {
-            p.vehicle = vehicleId;
+            p.vehicle = veh.name;
             if (p.status === 'new') p.status = 'work';
             // Оновлюємо на сервері
             updatePassengerOnServer(p);
@@ -3583,7 +3589,8 @@ function bulkAssignVehicle(vehicleId) {
     clearSelection();
     render();
     updateAllCounts();
-    showToast(`🚐 Авто призначено: ${count}`);
+    updateVehiclesList();
+    showToast(`🚐 ${veh.name} призначено: ${count}`);
 }
 
 function bulkMoveToRoute() {
@@ -4123,27 +4130,39 @@ function startOptimization() {
     const startAddress = document.getElementById('optimizeStart').value.trim();
     const endAddress = document.getElementById('optimizeEnd').value.trim();
     
+    // Визначаємо поле адреси для оптимізації
+    const addressField = optimizeBy === 'from' ? 'from' : 'to';
+
     // Чистимо дані - відправляємо тільки потрібні поля з явними адресами
-    const passengersWithUid = optimizePassengersList.map(p => ({
-        id: p.id || '',
-        name: p.name || '',
-        phone: p.phone || '',
-        from: p.from || '',
-        to: p.to || '',
-        seats: p.seats || 1,
-        payment: p.payment || '',
-        direction: p.direction || '',
-        date: p.date || '',
-        vehicle: p.vehicle || '',
-        _uid: (p._sheet && p._rowNum) ? `${p._sheet}_${p._rowNum}` : null,
-        _sheet: p._sheet || '',
-        _rowNum: p._rowNum || ''
-    }));
+    // Додаємо поле "address" — адреса для оптимізації (сервер шукає саме це поле)
+    const passengersWithUid = optimizePassengersList.map(p => {
+        const addr = (optimizeBy === 'from' ? p.from : p.to) || '';
+        // Визначаємо ім'я авто (якщо збережено ID, конвертуємо в name)
+        let vehicleName = p.vehicle || '';
+        const veh = vehicles.find(v => v.id === vehicleName);
+        if (veh) vehicleName = veh.name;
+
+        return {
+            id: p.id || '',
+            name: p.name || '',
+            phone: p.phone || '',
+            from: p.from || '',
+            to: p.to || '',
+            address: addr, // Головне поле для геокодування
+            seats: p.seats || 1,
+            payment: p.payment || '',
+            direction: p.direction || '',
+            date: p.date || '',
+            vehicle: vehicleName,
+            _uid: (p._sheet && p._rowNum) ? `${p._sheet}_${p._rowNum}` : null,
+            _sheet: p._sheet || '',
+            _rowNum: p._rowNum || ''
+        };
+    });
 
     // Перевіряємо чи є адреси для оптимізації
-    const addressField = optimizeBy === 'from' ? 'from' : 'to';
-    const withAddress = passengersWithUid.filter(p => p[addressField] && p[addressField].trim());
-    const withoutAddress = passengersWithUid.filter(p => !p[addressField] || !p[addressField].trim());
+    const withAddress = passengersWithUid.filter(p => p.address && p.address.trim());
+    const withoutAddress = passengersWithUid.filter(p => !p.address || !p.address.trim());
 
     if (withAddress.length === 0) {
         document.getElementById('optimizeFormBody').style.display = 'block';
@@ -4154,15 +4173,17 @@ function startOptimization() {
     }
 
     if (withoutAddress.length > 0) {
-        showToast(`⚠️ ${withoutAddress.length} лідів без адреси - будуть пропущені`);
+        showToast(`⚠️ ${withoutAddress.length} лідів без адреси — будуть пропущені`);
     }
+
+    console.log('Optimize payload:', { optimizeBy, startAddress, endAddress, passengers: passengersWithUid.map(p => ({ id: p.id, address: p.address, from: p.from, to: p.to })) });
 
     const payload = {
         action: 'optimize',
         payload: {
             passengers: passengersWithUid,
             optimizeBy: optimizeBy,
-            startAddress: startAddress,
+            startAddress: startAddress || 'Ужгород',
             endAddress: endAddress
         }
     };
@@ -4292,21 +4313,66 @@ function applyOptimizedOrder(orderedPassengers, notGeocodedList) {
     updateAllCounts();
 }
 
+// Закрити панель оптимізації
+function closeOptimization() {
+    document.getElementById('optimizationPanel')?.classList.remove('show');
+}
+
+// Відкрити Google Maps з оптимізованими точками
+function openGoogleMaps() {
+    const optimized = passengers.filter(p => p.status === 'optimize').sort((a, b) => (a.order || 0) - (b.order || 0));
+    if (!optimized.length) return showToast('⚠️ Немає оптимізованих заявок');
+
+    // Будуємо URL маршруту через waypoints
+    const addresses = optimized.map(p => optimizeBy === 'from' ? p.from : p.to).filter(Boolean);
+    if (addresses.length === 0) return showToast('❌ Немає адрес');
+
+    const origin = encodeURIComponent(addresses[0]);
+    const destination = encodeURIComponent(addresses[addresses.length - 1]);
+    const waypoints = addresses.slice(1, -1).map(a => encodeURIComponent(a)).join('|');
+
+    let url = `https://www.google.com/maps/dir/?api=1&origin=${origin}&destination=${destination}`;
+    if (waypoints) url += `&waypoints=${waypoints}`;
+
+    window.open(url, '_blank');
+}
+
+// Підтвердити оптимізацію → перевести в маршрут
+function confirmOptimization() {
+    const optimized = passengers.filter(p => p.status === 'optimize');
+    if (!optimized.length) return showToast('⚠️ Немає оптимізованих заявок');
+
+    // Виділяємо їх та переводимо в маршрут
+    selectedIds.clear();
+    optimized.forEach(p => {
+        const uid = (p._sheet && p._rowNum) ? `${p._sheet}_${p._rowNum}` : null;
+        if (uid) selectedIds.add(uid);
+    });
+
+    if (selectedIds.size > 0) {
+        bulkMoveToRoute();
+    } else {
+        showToast('⚠️ Синхронізуй дані перед маршрутом');
+    }
+    closeOptimization();
+}
+
 // UNDO SYSTEM
 function saveForUndo(action) {
     // Зберігаємо копію стану вибраних пасажирів
-    const snapshot = [...selectedIds].map(id => {
-        const p = passengers.find(x => x.id === id);
+    const snapshot = [...selectedIds].map(uid => {
+        const p = findPassengerByUid(uid);
         return p ? { ...p } : null;
     }).filter(Boolean);
-    
+
     undoHistory.push({ action, snapshot, timestamp: Date.now() });
-    
+
     // Максимум 10 дій в історії
     if (undoHistory.length > 10) undoHistory.shift();
-    
-    // Показуємо кнопку undo
-    document.getElementById('btnUndo').style.display = 'flex';
+
+    // Показуємо кнопку undo (якщо є)
+    const btnUndo = document.getElementById('btnUndo');
+    if (btnUndo) btnUndo.style.display = 'flex';
 }
 
 function undoLastAction() {
@@ -4328,8 +4394,9 @@ function undoLastAction() {
     renderCalendars();
     
     // Ховаємо кнопку якщо історія пуста
-    if (!undoHistory.length) {
-        document.getElementById('btnUndo').style.display = 'none';
+    const btnUndoEl = document.getElementById('btnUndo');
+    if (!undoHistory.length && btnUndoEl) {
+        btnUndoEl.style.display = 'none';
     }
     
     showToast(`↩️ Відмінено: ${last.action}`);
