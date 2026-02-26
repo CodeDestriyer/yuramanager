@@ -55,29 +55,35 @@ $tagName = isset($input['tagName']) ? trim($input['tagName']) : '';
 if (empty($userId)) { echo json_encode(['error' => 'userId porozhnij']); exit; }
 if (empty($tagName)) { echo json_encode(['error' => 'tagName porozhnij']); exit; }
 
+// Funktsiya poshuku tegu po vsih storinkah
+function findTagByName($tagName, $token) {
+    $page = 1;
+    $maxPages = 10; // zahyst vid neskinchennoho tsyklu
+    do {
+        $r = ssApi('GET', 'https://api.smartsender.com/v1/tags?term=' . urlencode($tagName) . '&page=' . $page . '&limitation=50', $token);
+        if ($r['curlError'] || $r['httpCode'] < 200 || $r['httpCode'] >= 300) break;
+
+        $collection = [];
+        if (isset($r['data']['collection'])) $collection = $r['data']['collection'];
+        elseif (isset($r['data']['data'])) $collection = $r['data']['data'];
+        elseif (is_array($r['data'])) $collection = $r['data'];
+
+        foreach ($collection as $tag) {
+            if (isset($tag['name']) && strtolower(trim($tag['name'])) === strtolower(trim($tagName))) {
+                return $tag['id'];
+            }
+        }
+
+        $totalPages = isset($r['data']['cursor']['pages']) ? (int)$r['data']['cursor']['pages'] : 1;
+        $page++;
+    } while ($page <= $totalPages && $page <= $maxPages);
+
+    return null;
+}
+
 // KROK 1: SHUKAJEMO teg
-$tagId = null;
+$tagId = findTagByName($tagName, $token);
 $step = 'KROK 1: Poshuk tegu';
-
-$r1 = ssApi('GET', 'https://api.smartsender.com/v1/tags?term=' . urlencode($tagName) . '&page=1&limitation=20', $token);
-
-if ($r1['curlError']) { echo json_encode(['error' => $step . ' cURL: ' . $r1['curlError']]); exit; }
-if ($r1['httpCode'] < 200 || $r1['httpCode'] >= 300) {
-    echo json_encode(['error' => $step . ' HTTP ' . $r1['httpCode'] . ': ' . $r1['raw']]);
-    exit;
-}
-
-$collection = [];
-if (isset($r1['data']['collection'])) $collection = $r1['data']['collection'];
-elseif (isset($r1['data']['data'])) $collection = $r1['data']['data'];
-elseif (is_array($r1['data'])) $collection = $r1['data'];
-
-foreach ($collection as $tag) {
-    if (isset($tag['name']) && strtolower(trim($tag['name'])) === strtolower(trim($tagName))) {
-        $tagId = $tag['id'];
-        break;
-    }
-}
 
 // KROK 2: Yakshcho ne znajshly - STVORYUJEMO
 if (!$tagId) {
@@ -93,20 +99,9 @@ if (!$tagId) {
         $tagId = $r2['data']['id'];
     } elseif ($r2['httpCode'] === 422 || $r2['httpCode'] === 409) {
         usleep(500000);
-        $r2b = ssApi('GET', 'https://api.smartsender.com/v1/tags?term=' . urlencode($tagName) . '&page=1&limitation=20', $token);
-        $col2 = [];
-        if (isset($r2b['data']['collection'])) $col2 = $r2b['data']['collection'];
-        elseif (isset($r2b['data']['data'])) $col2 = $r2b['data']['data'];
-        elseif (is_array($r2b['data'])) $col2 = $r2b['data'];
-
-        foreach ($col2 as $tag) {
-            if (isset($tag['name']) && strtolower(trim($tag['name'])) === strtolower(trim($tagName))) {
-                $tagId = $tag['id'];
-                break;
-            }
-        }
+        $tagId = findTagByName($tagName, $token);
         if (!$tagId) {
-            echo json_encode(['error' => $step . ' Teg isnuje ale ne znajdeno. CREATE: ' . $r2['raw'] . ' | SEARCH: ' . $r2b['raw']]);
+            echo json_encode(['error' => $step . ' Teg isnuje ale ne znajdeno na zhodnij storintsi']);
             exit;
         }
     } else {
