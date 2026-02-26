@@ -3662,7 +3662,7 @@ function renderRoutePassengers() {
                         <div class="card-vehicle">
                             ${vehicleBadge}
                         </div>
-                        <span class="card-expand-icon">▼</span>
+                        <button class="card-actions-toggle" onclick="event.stopPropagation();toggleRouteActions('${p._uid}')">▼</button>
                     </div>
                 </div>
                 <div class="card-details" id="details_${p._uid}" style="display:none;">
@@ -3682,6 +3682,11 @@ function renderRoutePassengers() {
                     </div>
                     ${p.note ? `<div class="detail-note"><span class="detail-label">📝 Примітка</span><div>${p.note}</div></div>` : ''}
                 </div>
+                <div class="card-actions" id="actions_${p._uid}" style="display:none;">
+                    <button class="btn-card-action btn-call" onclick="event.stopPropagation();location.href='tel:${p.phone}'">📞 Дзвонити</button>
+                    <button class="btn-card-action btn-map" onclick="event.stopPropagation();openRouteMap('${encodeURIComponent(p.from || '')}','${encodeURIComponent(p.to || '')}')">🗺️ Карта</button>
+                    <button class="btn-card-action btn-delete" onclick="event.stopPropagation();showRouteDeleteChoice('${p._uid}')">🗑️ Видалити</button>
+                </div>
             </div>
         `;
     });
@@ -3700,20 +3705,179 @@ function toggleRouteCardDetails(uid) {
     const details = document.getElementById('details_' + uid);
     const card = details?.closest('.lead-card');
     if (!details || !card) return;
-    
+
     const isOpen = details.style.display !== 'none';
-    
-    // Закриваємо всі інші
+
+    // Закриваємо всі інші деталі
     document.querySelectorAll('.card-details').forEach(d => {
         d.style.display = 'none';
         d.closest('.lead-card')?.classList.remove('expanded');
     });
-    
+
     // Відкриваємо/закриваємо поточну
     if (!isOpen) {
         details.style.display = 'block';
         card.classList.add('expanded');
     }
+}
+
+// Розгортання дій картки маршруту (▼ кнопка)
+function toggleRouteActions(uid) {
+    const actions = document.getElementById('actions_' + uid);
+    const card = actions?.closest('.lead-card');
+    if (!actions || !card) return;
+
+    const isOpen = actions.style.display !== 'none';
+
+    // Закриваємо всі інші дії
+    document.querySelectorAll('.card-actions[id^="actions_route"]').forEach(a => {
+        a.style.display = 'none';
+        a.closest('.lead-card')?.querySelector('.card-actions-toggle')?.classList.remove('open');
+    });
+
+    // Відкриваємо/закриваємо поточну
+    if (!isOpen) {
+        actions.style.display = 'grid';
+        card.querySelector('.card-actions-toggle')?.classList.add('open');
+    }
+}
+
+// Відкрити Google Maps для маршрутного пасажира
+function openRouteMap(fromEncoded, toEncoded) {
+    const from = decodeURIComponent(fromEncoded);
+    const to = decodeURIComponent(toEncoded);
+    if (from && to) {
+        window.open(`https://www.google.com/maps/dir/?api=1&origin=${encodeURIComponent(from)}&destination=${encodeURIComponent(to)}`, '_blank');
+    } else if (from) {
+        window.open(`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(from)}`, '_blank');
+    } else if (to) {
+        window.open(`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(to)}`, '_blank');
+    } else {
+        showToast('⚠️ Немає адреси');
+    }
+}
+
+// Вибір типу видалення в маршруті
+function showRouteDeleteChoice(uid) {
+    const p = routePassengers.find(rp => rp._uid === uid);
+    if (!p) return;
+
+    document.getElementById('routeDeleteChoiceModal')?.remove();
+
+    const modal = document.createElement('div');
+    modal.className = 'modal-overlay show';
+    modal.id = 'routeDeleteChoiceModal';
+    modal.innerHTML = `
+        <div class="modal" style="max-width:380px;">
+            <div class="modal-header" style="background:#fee2e2;border-bottom:1px solid #fecaca;">
+                <span class="modal-title" style="color:#dc2626;">🗑️ Видалити</span>
+                <button class="modal-close" onclick="document.getElementById('routeDeleteChoiceModal').remove()">✕</button>
+            </div>
+            <div class="modal-body" style="padding:20px;">
+                <div style="text-align:center;margin-bottom:16px;">
+                    <div style="font-size:14px;font-weight:600;">${p.name || 'Без імені'}</div>
+                    <div style="font-size:12px;color:var(--text-secondary);">${p.phone || '—'}</div>
+                </div>
+                <div style="display:flex;flex-direction:column;gap:10px;">
+                    <button onclick="deleteFromRouteOnly('${uid}')" style="padding:14px;border:none;border-radius:10px;background:#f59e0b;color:white;font-weight:600;font-size:13px;cursor:pointer;">
+                        📋 Видалити з маршруту<br>
+                        <span style="font-size:11px;font-weight:400;opacity:0.9;">Лід залишиться в головному списку</span>
+                    </button>
+                    <button onclick="deleteFromRouteAndTrash('${uid}')" style="padding:14px;border:none;border-radius:10px;background:#dc2626;color:white;font-weight:600;font-size:13px;cursor:pointer;">
+                        🗑️ Видалити в корзину<br>
+                        <span style="font-size:11px;font-weight:400;opacity:0.9;">Лід буде архівовано</span>
+                    </button>
+                </div>
+            </div>
+        </div>
+    `;
+    document.body.appendChild(modal);
+}
+
+// Видалити тільки з маршруту (лід залишається в основному списку)
+function deleteFromRouteOnly(uid) {
+    document.getElementById('routeDeleteChoiceModal')?.remove();
+    const p = routePassengers.find(rp => rp._uid === uid);
+    if (!p) return;
+
+    const sheetName = currentRouteVehicle?.routeSheet || p._vehicleName;
+    if (!sheetName) return showToast('❌ Невідомий аркуш маршруту');
+
+    showRouteProgress('Видаляю з маршруту...');
+
+    fetch(ROUTE_API_URL, {
+        method: 'POST',
+        headers: { 'Content-Type': 'text/plain' },
+        body: JSON.stringify({
+            action: 'deleteRoutePassenger',
+            payload: { sheetName: sheetName, passengerId: String(p.id) }
+        })
+    })
+    .then(r => r.json())
+    .then(data => {
+        hideRouteProgress();
+        if (data.success) {
+            // Видаляємо з локального масиву
+            routePassengers = routePassengers.filter(rp => rp._uid !== uid);
+            routeStats.total = routePassengers.length;
+            renderRoutePassengers();
+            updateAllCounts();
+            showToast('📋 Видалено з маршруту');
+        } else {
+            showToast('❌ ' + (data.error || 'Помилка'));
+        }
+    })
+    .catch(err => {
+        hideRouteProgress();
+        console.error('deleteFromRouteOnly error:', err);
+        showToast('❌ Помилка видалення');
+    });
+}
+
+// Видалити з маршруту + в архів (корзину)
+function deleteFromRouteAndTrash(uid) {
+    document.getElementById('routeDeleteChoiceModal')?.remove();
+    const p = routePassengers.find(rp => rp._uid === uid);
+    if (!p) return;
+
+    const sheetName = currentRouteVehicle?.routeSheet || p._vehicleName;
+    if (!sheetName) return showToast('❌ Невідомий аркуш маршруту');
+
+    showRouteProgress('Видаляю...');
+
+    // 1) Видаляємо з маршруту
+    fetch(ROUTE_API_URL, {
+        method: 'POST',
+        headers: { 'Content-Type': 'text/plain' },
+        body: JSON.stringify({
+            action: 'deleteRoutePassenger',
+            payload: { sheetName: sheetName, passengerId: String(p.id) }
+        })
+    })
+    .then(r => r.json())
+    .then(data => {
+        // 2) Архівуємо в головному списку
+        const mainPassenger = passengers.find(mp => String(mp.id) === String(p.id));
+        if (mainPassenger) {
+            mainPassenger.status = 'archived';
+            mainPassenger.archiveDate = new Date().toISOString().split('T')[0];
+            updatePassengerOnServer(mainPassenger);
+            saveSettings();
+        }
+
+        hideRouteProgress();
+        // Видаляємо з локального масиву маршруту
+        routePassengers = routePassengers.filter(rp => rp._uid !== uid);
+        routeStats.total = routePassengers.length;
+        renderRoutePassengers();
+        updateAllCounts();
+        showToast('🗑️ Видалено в корзину');
+    })
+    .catch(err => {
+        hideRouteProgress();
+        console.error('deleteFromRouteAndTrash error:', err);
+        showToast('❌ Помилка видалення');
+    });
 }
 
 // Оновити кількість в маршрутах (викликається при відкритті dropdown)
@@ -4511,18 +4675,31 @@ function getStatusName(status) {
 
 // SELECT ALL VISIBLE
 function selectAllVisible() {
-    const data = getFilteredData();
-    const visibleUids = data.map((p, idx) => 
-        (p._sheet && p._rowNum) ? `${p._sheet}_${p._rowNum}` : `local_${idx}`
-    );
-    
+    // Визначаємо чи ми в режимі маршруту
+    const isRouteView = filters.statusFilter === 'route' && filters.routeVehicle;
+
+    let visibleUids;
+    if (isRouteView && routePassengers.length > 0) {
+        // В маршруті — використовуємо routePassengers
+        visibleUids = routePassengers.map(p => p._uid);
+    } else {
+        const data = getFilteredData();
+        visibleUids = data.map((p, idx) =>
+            (p._sheet && p._rowNum) ? `${p._sheet}_${p._rowNum}` : `local_${idx}`
+        );
+    }
+
     // Перевіряємо чи всі вже вибрані
     const allSelected = visibleUids.every(uid => selectedIds.has(uid));
-    
+
     if (allSelected) {
         // Знімаємо всі галочки (але НЕ ховаємо sidebar)
         visibleUids.forEach(uid => selectedIds.delete(uid));
-        render();
+        if (isRouteView) {
+            renderRoutePassengers();
+        } else {
+            render();
+        }
         // Оновлюємо тільки лічильники, НЕ ховаємо панель
         document.getElementById('bulkCount').textContent = selectedIds.size;
         const sidebarCount = document.getElementById('bulkCountSidebar');
@@ -4531,7 +4708,11 @@ function selectAllVisible() {
     } else {
         // Ставимо всі галочки
         visibleUids.forEach(uid => selectedIds.add(uid));
-        render();
+        if (isRouteView) {
+            renderRoutePassengers();
+        } else {
+            render();
+        }
         updateBulkBar();
         showToast(`☑️ Вибрано ${visibleUids.length}`);
     }
