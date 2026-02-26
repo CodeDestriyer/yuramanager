@@ -216,7 +216,7 @@
         /* Коли PC sidebar розгорнутий — bulk sidebar = 300px = PC sidebar, зсув не потрібен */
         .pc-sidebar:not(.collapsed-sidebar) ~ .main-content-area.shifted-by-bulk { margin-left: 0; }
         @media (max-width: 1099px) {
-            .main-content-area.shifted-by-bulk { margin-left: 0; margin-right: 180px; }
+            .main-content-area.shifted-by-bulk { margin-left: 0; margin-right: 0; }
         }
 
         /* DASHBOARD - Owner Only */
@@ -510,13 +510,16 @@
         .side-menu .calendar-day.selected { background: #3b82f6; color: white; }
         .side-menu .calendar-day.has-leads { background: rgba(59,130,246,0.3); color: white; }
         .side-menu .calendar-day.overbooked { background: rgba(239,68,68,0.3) !important; border: 1px solid #ef4444 !important; }
-        .side-menu .calendar-day-count { 
-            font-size: 7px; 
-            padding: 0 2px; 
-            min-width: 10px; 
-            top: 1px; 
-            right: 1px;
+        .side-menu .calendar-day-count {
+            font-size: 7px;
+            padding: 1px 2px;
+            min-width: 10px;
+            top: 1px;
+            left: 50%;
+            right: auto;
+            transform: translateX(-50%);
             background: #3b82f6;
+            white-space: nowrap;
         }
         .side-menu .calendar-actions { margin-top: 6px; gap: 4px; }
         .side-menu .calendar-actions button { 
@@ -533,6 +536,11 @@
             color: white; 
         }
 
+        /* Calendar direction selector */
+        .cal-direction-bar { display: flex; gap: 4px; margin-bottom: 8px; }
+        .cal-direction-select { width: 100%; padding: 6px 8px; border: 1px solid var(--border); border-radius: 6px; font-size: 11px; font-weight: 600; font-family: inherit; background: var(--bg-main); color: var(--text-primary); cursor: pointer; outline: none; }
+        .cal-direction-select:focus { border-color: var(--primary); box-shadow: 0 0 0 2px rgba(26,58,94,0.1); }
+
         /* CALENDAR */
         .calendar-box { background: white; border-radius: 8px; padding: 12px; }
         .calendar-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px; }
@@ -543,7 +551,7 @@
         .calendar-weekdays { display: grid; grid-template-columns: repeat(7, 1fr); text-align: center; margin-bottom: 4px; }
         .calendar-weekday { font-size: 10px; font-weight: 700; color: var(--text-secondary); padding: 4px 0; }
         .calendar-days { display: grid; grid-template-columns: repeat(7, 1fr); gap: 2px; }
-        .calendar-day { position: relative; display: flex; align-items: center; justify-content: center; font-size: 12px; font-weight: 600; border-radius: 6px; cursor: pointer; background: var(--bg-main); color: var(--text-secondary); height: 32px; }
+        .calendar-day { position: relative; display: flex; align-items: center; justify-content: center; font-size: 12px; font-weight: 600; border-radius: 6px; cursor: pointer; background: var(--bg-main); color: var(--text-secondary); height: 32px; overflow: visible; }
         .calendar-day:hover { background: var(--border); }
         .calendar-day.other-month { color: #cbd5e1; background: transparent; cursor: default; }
         .calendar-day.other-month:hover { background: transparent; }
@@ -551,7 +559,7 @@
         .calendar-day.selected { background: var(--primary); color: white; }
         .calendar-day.has-leads { background: #dbeafe; color: var(--info); font-weight: 700; }
         .calendar-day.has-leads.selected { background: var(--primary); color: white; }
-        .calendar-day-count { position: absolute; top: 1px; right: 2px; font-size: 8px; font-weight: 700; color: white; background: var(--accent); padding: 1px 3px; border-radius: 6px; line-height: 1; min-width: 12px; text-align: center; }
+        .calendar-day-count { position: absolute; top: 1px; left: 50%; transform: translateX(-50%); font-size: 8px; font-weight: 700; color: white; background: var(--accent); padding: 1px 3px; border-radius: 6px; line-height: 1; min-width: 12px; text-align: center; white-space: nowrap; }
         .calendar-day.selected .calendar-day-count { background: rgba(255,255,255,0.9); color: var(--primary); }
         .calendar-day.overbooked { background: #fee2e2 !important; border: 2px solid #ef4444 !important; }
         .calendar-day.overbooked .calendar-day-count { background: #ef4444; }
@@ -681,7 +689,7 @@
         .order-num { background: var(--purple); color: white; padding: 2px 6px; border-radius: 4px; font-size: 10px; font-weight: 700; flex-shrink: 0; }
         
         /* Right section - Авто вгорі, кнопка внизу */
-        .card-right-section { display: flex; flex-direction: column; align-items: center; justify-content: space-between; padding: 6px 10px; border-left: 1px solid var(--border); flex-shrink: 0; min-width: 75px; overflow: visible; position: relative; }
+        .card-right-section { display: flex; flex-direction: column; align-items: center; justify-content: space-between; padding: 6px 8px; border-left: 1px solid var(--border); flex-shrink: 0; min-width: 60px; max-width: 80px; overflow: hidden; position: relative; }
         .card-vehicle-badge { background: var(--info); color: white; padding: 4px 8px; border-radius: 4px; font-size: 9px; font-weight: 600; cursor: pointer; white-space: nowrap; text-align: center; }
         .card-vehicle-badge:hover { background: var(--primary); }
         .card-vehicle-badge.empty { background: var(--bg-main); color: var(--text-secondary); border: 1px dashed var(--text-secondary); }
@@ -706,9 +714,9 @@
         .detail-block-value { font-size: 12px; font-weight: 600; color: var(--text-primary); word-break: break-word; }
         .detail-block-value.empty { color: var(--text-secondary); opacity: 0.5; }
         
-        /* Actions panel - 2x2 grid */
-        .card-actions { display: none; padding: 10px 12px; background: white; border-top: 1px solid var(--border); }
-        .card-actions.show { display: grid; grid-template-columns: repeat(2, 1fr); gap: 8px; }
+        /* Actions panel - smooth slide */
+        .card-actions { display: grid; grid-template-columns: repeat(2, 1fr); gap: 6px; max-height: 0; overflow: hidden; padding: 0 12px; background: white; transition: max-height 0.25s ease, padding 0.25s ease; }
+        .card-actions.show { max-height: 200px; padding: 10px 12px; border-top: 1px solid var(--border); }
         .btn-card-action { padding: 10px 6px; border: none; border-radius: 6px; font-size: 11px; font-weight: 600; cursor: pointer; font-family: inherit; display: flex; align-items: center; justify-content: center; gap: 4px; }
         .btn-card-action.btn-delete { background: #fee2e2; color: #dc2626; }
         .btn-card-action.btn-delete:hover { background: #dc2626; color: white; }
@@ -733,9 +741,16 @@
             .route-stat-num { font-size: 20px; }
             .route-stat-label { font-size: 10px; }
             /* Картки на мобільному */
-            .card-top-row { flex-wrap: wrap; }
-            .card-phone { min-width: auto; }
+            .card-top-row { flex-wrap: wrap; gap: 3px; }
+            .card-phone { min-width: auto; font-size: 12px; }
             .card-direction { width: auto; }
+            .card-right-section { min-width: 52px; max-width: 65px; padding: 4px 6px; }
+            .card-vehicle-badge { font-size: 8px; padding: 3px 5px; }
+            .card-actions.show { grid-template-columns: repeat(2, 1fr); gap: 5px; padding: 8px; }
+            .btn-card-action { padding: 8px 4px; font-size: 10px; }
+            .card-route { font-size: 11px; }
+            .card-name { font-size: 11px; }
+            .card-price { font-size: 12px; }
         }
         .btn-call { background: var(--primary); color: white; }
         .btn-msg { background: #7c3aed; color: white; }
@@ -1089,39 +1104,93 @@
         
         /* Mobile styles */
         @media (max-width: 1099px) {
-            /* Bulk actions sidebar - СПРАВА на мобільному */
-            .bulk-actions-bar { display: none !important; }
-            .bulk-actions-sidebar {
-                display: none;
+            /* Mobile: bulk sidebar ЗАХОВАНО, використовуємо bulk-actions-bar */
+            .bulk-actions-sidebar { display: none !important; }
+
+            /* Mobile bulk action bar — компактна панель внизу */
+            .bulk-actions-bar {
                 position: fixed;
-                top: 52px;
+                bottom: 58px;
+                left: 0;
                 right: 0;
-                left: auto;
-                bottom: 0;
-                width: 180px;
-                transform: translateX(100%);
-                box-shadow: -4px 0 20px rgba(0,0,0,0.3);
+                background: linear-gradient(135deg, #7f1d1d 0%, #5b1010 100%);
+                z-index: 150;
+                display: none;
+                flex-direction: column;
+                box-shadow: 0 -4px 20px rgba(0,0,0,0.25);
+                border-radius: 16px 16px 0 0;
+                padding: 0;
+                transform: translateY(100%);
+                transition: transform 0.3s ease;
             }
-            .bulk-actions-sidebar.show {
+            .bulk-actions-bar.show {
                 display: flex;
-                transform: translateX(0);
+                transform: translateY(0);
             }
-            .bulk-sidebar-header { padding: 12px; }
-            .bulk-sidebar-title { font-size: 13px; }
-            .bulk-sidebar-count { font-size: 11px; padding: 3px 8px; }
-            .bulk-sidebar-actions { padding: 6px; gap: 3px; }
-            .bulk-sidebar-btn {
-                padding: 10px 12px;
-                font-size: 12px;
-                border-radius: 6px;
+            .bulk-actions-content {
+                display: flex;
+                flex-direction: column;
+                gap: 0;
             }
-            .bulk-sidebar-btn .btn-icon { font-size: 14px; }
-            .bulk-sidebar-divider { margin: 6px 0; }
-            .bulk-sidebar-menu-btn { display: none; }
-            .bulk-sidebar-close { padding: 8px; }
-            .bulk-sidebar-close-btn { padding: 10px; font-size: 12px; }
-            .bulk-sidebar-more-toggle { padding: 8px 10px; font-size: 11px; }
-            .bulk-sidebar-secondary .bulk-sidebar-btn { padding: 8px 10px; font-size: 11px; }
+            /* Верхній рядок: кількість + кнопка закрити */
+            .bulk-bar-header {
+                display: flex;
+                align-items: center;
+                justify-content: space-between;
+                padding: 10px 14px 6px;
+            }
+            .bulk-selected {
+                color: rgba(255,255,255,0.95);
+                font-size: 13px;
+                font-weight: 600;
+            }
+            .bulk-bar-close {
+                background: rgba(255,255,255,0.15);
+                border: none;
+                color: white;
+                width: 28px;
+                height: 28px;
+                border-radius: 50%;
+                font-size: 14px;
+                cursor: pointer;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+            }
+            /* Кнопки дій — горизонтальна прокрутка */
+            .bulk-buttons {
+                display: flex;
+                gap: 6px;
+                padding: 6px 14px 12px;
+                overflow-x: auto;
+                -webkit-overflow-scrolling: touch;
+                scrollbar-width: none;
+            }
+            .bulk-buttons::-webkit-scrollbar { display: none; }
+            .bulk-btn {
+                flex-shrink: 0;
+                padding: 8px 12px;
+                border: none;
+                border-radius: 10px;
+                background: rgba(255,255,255,0.15);
+                color: white;
+                font-size: 13px;
+                font-weight: 500;
+                cursor: pointer;
+                display: flex;
+                align-items: center;
+                gap: 4px;
+                white-space: nowrap;
+                transition: background 0.2s;
+            }
+            .bulk-btn:active { background: rgba(255,255,255,0.3); }
+            .bulk-btn.select-all { background: rgba(255,255,255,0.2); }
+            .bulk-btn.cancel {
+                background: rgba(255,255,255,0.1);
+                border: 1px solid rgba(255,255,255,0.25);
+                font-size: 16px;
+                padding: 8px 10px;
+            }
         }
 
         /* VEHICLE BADGE ON CARD */
@@ -1290,6 +1359,7 @@
             .workflow-bar { display: none; }
             .search-box { max-width: none; }
             .pc-sidebar { display: none; }
+            .bottom-nav { padding: 4px 6px; }
         }
 
         @media (min-width: 901px) {
@@ -1304,7 +1374,7 @@
             .card-route { font-size: 12px; }
             .card-price { font-size: 15px; }
             .details-grid { grid-template-columns: repeat(4, 1fr); }
-            .card-actions.show { grid-template-columns: repeat(4, 1fr); }
+            .card-actions.show { grid-template-columns: repeat(5, 1fr); }
             .workflow-bar { display: none; }
             .pc-sidebar-collapse-btn { display: flex; }
         }
@@ -1353,6 +1423,13 @@
                 <span class="section-toggle" id="toggleDates">▼</span>
             </div>
             <div class="side-menu-collapsible" id="mobileDatesSection">
+                <div class="cal-direction-bar" style="padding:0 4px;">
+                    <select class="cal-direction-select" onchange="setDirection(this.value);closeSideMenu();">
+                        <option value="all">📊 Всі напрямки</option>
+                        <option value="ua-eu">🇺🇦→🇪🇺 Україна-Європа</option>
+                        <option value="eu-ua">🇪🇺→🇺🇦 Європа-Україна</option>
+                    </select>
+                </div>
                 <div class="calendar-box" id="mobileCalendar"></div>
             </div>
         </div>
@@ -1472,6 +1549,13 @@
                 <span class="pc-sidebar-toggle" id="pcToggleDate">▼</span>
             </div>
             <div class="pc-sidebar-content collapsed" id="pcSectionDate">
+                <div class="cal-direction-bar">
+                    <select class="cal-direction-select" onchange="setDirection(this.value)">
+                        <option value="all">📊 Всі напрямки</option>
+                        <option value="ua-eu">🇺🇦→🇪🇺 Україна-Європа</option>
+                        <option value="eu-ua">🇪🇺→🇺🇦 Європа-Україна</option>
+                    </select>
+                </div>
                 <div class="pc-sidebar-calendar" id="pcCalendar"></div>
             </div>
         </div>
@@ -1660,6 +1744,13 @@
                     <div class="dropdown-container">
                         <button class="wf-btn" id="btnDate" onclick="toggleDropdown('dateDropdown')">📅 <span id="dateLabel">Дата</span> <span class="count" id="dateCount" style="display:none">0</span> ▼</button>
                         <div class="dropdown-menu" id="dateDropdown">
+                            <div class="cal-direction-bar">
+                                <select class="cal-direction-select" onchange="setDirection(this.value)">
+                                    <option value="all">📊 Всі напрямки</option>
+                                    <option value="ua-eu">🇺🇦→🇪🇺 Україна-Європа</option>
+                                    <option value="eu-ua">🇪🇺→🇺🇦 Європа-Україна</option>
+                                </select>
+                            </div>
                             <div id="desktopCalendar"></div>
                         </div>
                     </div>
@@ -1714,7 +1805,7 @@
     </div>
 </div>
 
-<!-- BULK ACTIONS SIDEBAR - PC версія (виїзна панель зліва) -->
+<!-- BULK ACTIONS SIDEBAR -->
 <div class="bulk-actions-sidebar" id="bulkActionsSidebar">
     <div class="bulk-sidebar-header">
         <span class="bulk-sidebar-title">Дії</span>
@@ -1778,17 +1869,19 @@
 <!-- BULK ACTIONS BAR - Mobile версія -->
 <div class="bulk-actions-bar" id="bulkActionsBar">
     <div class="bulk-actions-content">
-        <span class="bulk-selected">Вибрано: <span id="bulkCount">0</span></span>
+        <div class="bulk-bar-header">
+            <span class="bulk-selected">Вибрано: <span id="bulkCount">0</span></span>
+            <button class="bulk-bar-close" onclick="clearSelection()">✕</button>
+        </div>
         <div class="bulk-buttons">
             <button class="bulk-btn select-all" onclick="selectAllVisible()">☑️ Всі</button>
             <button class="bulk-btn vehicle" onclick="openBulkVehicleModal()">🚐 Авто</button>
-            <button class="bulk-btn optimize" onclick="bulkOptimize()">⚡</button>
-            <button class="bulk-btn route" onclick="bulkMoveToRoute()">🚀</button>
-            <button class="bulk-btn" onclick="openTagModal()" style="background:#7c3aed;color:white;">🏷️</button>
-            <button class="bulk-btn notify" id="btnBulkNotify" onclick="bulkMarkNotified()" style="display:none;background:#f97316;">🔔</button>
-            <button class="bulk-btn archive" id="btnBulkArchive" onclick="bulkArchive()">📦</button>
-            <button class="bulk-btn restore" id="btnBulkRestore" onclick="bulkRestore()" style="display:none;background:var(--success);">↩️</button>
-            <button class="bulk-btn cancel" onclick="clearSelection()">✕</button>
+            <button class="bulk-btn optimize" onclick="bulkOptimize()">⚡ Опт</button>
+            <button class="bulk-btn route" onclick="bulkMoveToRoute()">🚀 Маршрут</button>
+            <button class="bulk-btn" onclick="openTagModal()" style="background:rgba(139,92,246,0.4);">🏷️ Тег</button>
+            <button class="bulk-btn notify" id="btnBulkNotify" onclick="bulkMarkNotified()" style="display:none;background:rgba(249,115,22,0.5);">🔔</button>
+            <button class="bulk-btn archive" id="btnBulkArchive" onclick="bulkArchive()">📦 Архів</button>
+            <button class="bulk-btn restore" id="btnBulkRestore" onclick="bulkRestore()" style="display:none;background:rgba(34,197,94,0.4);">↩️</button>
         </div>
     </div>
 </div>
@@ -2158,6 +2251,7 @@ async function syncVehiclesFromServer() {
     }
 }
 let filters = {date:'',vehicle:'',search:'',showArchive:false,statusFilter:'',routeVehicle:'',direction:'all',specialStatus:'',statusDateFrom:'',statusDateTo:'',showNewOnly:true};
+let lastTab = 'new'; // 'new', 'all', 'ua-eu', 'eu-ua'
 let selectedIds = new Set();
 let editingId = null;
 let openDetailsId = null;
@@ -2170,15 +2264,14 @@ let undoHistory = []; // Історія для відміни дій
 document.addEventListener('DOMContentLoaded', () => {
     loadSettings();
     renderCalendars();
-    
-    // За замовчуванням показуємо нові ліди
-    filters.showNewOnly = true;
-    document.getElementById('pcNewLeads')?.classList.add('active');
-    document.getElementById('mobileNewLeads')?.classList.add('active');
-    const navLabel = document.getElementById('navPassengersLabel');
-    if (navLabel) navLabel.textContent = '🆕 Нові';
-    
-    render();
+
+    // Відновлюємо останній вибраний таб або "Нові ліди" за замовчуванням
+    if (lastTab === 'ua-eu' || lastTab === 'eu-ua' || lastTab === 'all') {
+        setDirection(lastTab);
+    } else {
+        showNewLeads();
+    }
+
     updateVehiclesList();
     updateAllCounts();
 
@@ -2291,8 +2384,8 @@ function playNotificationSound() {
     }
 }
 
-function loadSettings() { try { const s = JSON.parse(localStorage.getItem('yuraCrmV16')||'{}'); if(s.colSettings)colSettings=s.colSettings; if(s.passengers)passengers=s.passengers; } catch(e){} }
-function saveSettings() { localStorage.setItem('yuraCrmV16', JSON.stringify({colSettings,passengers})); }
+function loadSettings() { try { const s = JSON.parse(localStorage.getItem('yuraCrmV16')||'{}'); if(s.colSettings)colSettings=s.colSettings; if(s.passengers)passengers=s.passengers; if(s.lastTab)lastTab=s.lastTab; } catch(e){} }
+function saveSettings() { localStorage.setItem('yuraCrmV16', JSON.stringify({colSettings,passengers,lastTab})); }
 
 // SIDE MENU
 function openSideMenu() { document.getElementById('sideMenu').classList.add('open'); document.getElementById('sideMenuOverlay').classList.add('show'); renderMobileCalendar(); updateMobileVehicles(); }
@@ -2472,11 +2565,13 @@ function renderCalendarTo(containerId) {
     const months = ['Січень','Лютий','Березень','Квітень','Травень','Червень','Липень','Серпень','Вересень','Жовтень','Листопад','Грудень'];
     const today = new Date().toISOString().split('T')[0];
     
-    // Рахуємо кількість МІСЦЬ (не лідів) на кожну дату
+    // Рахуємо ліди та місця на дату (з урахуванням напрямку)
     const seatCounts = {};
     const leadCounts = {};
     const hiddenInCalendar = ['archived', 'refused', 'transferred', 'deleted'];
-    passengers.filter(p => !hiddenInCalendar.includes(p.status)).forEach(p => {
+    const dir = filters.direction;
+    const filteredPassengers = passengers.filter(p => !hiddenInCalendar.includes(p.status)).filter(p => !dir || dir === 'all' || p.direction === dir);
+    filteredPassengers.forEach(p => {
         if(p.date) {
             leadCounts[p.date] = (leadCounts[p.date]||0) + 1;
             seatCounts[p.date] = (seatCounts[p.date]||0) + (parseInt(p.seats) || 1);
@@ -2506,10 +2601,10 @@ function renderCalendarTo(containerId) {
         let cls = 'calendar-day';
         if (dateStr === today) cls += ' today';
         if (dateStr === filters.date) cls += ' selected';
-        if (count > 0) cls += ' has-leads';
+        if (seats > 0) cls += ' has-leads';
         if (isOverbooked) cls += ' overbooked';
         const tooltip = isOverbooked ? `title="⚠️ ${seats}/${totalCapacity} місць"` : '';
-        daysHtml += `<div class="${cls}" onclick="selectDate('${dateStr}')" ${tooltip}>${day}${count ? `<span class="calendar-day-count">${count}</span>` : ''}</div>`;
+        daysHtml += `<div class="${cls}" onclick="selectDate('${dateStr}')" ${tooltip}>${day}${seats ? `<span class="calendar-day-count">${seats}</span>` : ''}</div>`;
     }
     
     // Дні наступного місяця (блідо)
@@ -2561,28 +2656,32 @@ function selectDate(dateStr) {
     }
 }
 
-// Перевірка місткості на дату (при виборі)
+// Перевірка місткості на дату (при виборі) — з урахуванням напрямку
 function checkCapacityWarning(dateStr) {
     const totalCapacity = vehicles.reduce((sum, v) => sum + (parseInt(v.seats) || 8), 0);
     const closedStatuses = ['archived', 'refused', 'transferred', 'deleted'];
+    const dir = filters.direction;
     const seatsOnDate = passengers
         .filter(p => p.date === dateStr && !closedStatuses.includes(p.status))
+        .filter(p => !dir || dir === 'all' || p.direction === dir)
         .reduce((sum, p) => sum + (parseInt(p.seats) || 1), 0);
 
     if (seatsOnDate > totalCapacity) {
         const dateFormatted = new Date(dateStr).toLocaleDateString('uk-UA');
-        showCapacityWarning(dateFormatted, seatsOnDate, totalCapacity);
+        const dirLabel = dir === 'ua-eu' ? ' (🇺🇦→🇪🇺)' : dir === 'eu-ua' ? ' (🇪🇺→🇺🇦)' : '';
+        showCapacityWarning(dateFormatted + dirLabel, seatsOnDate, totalCapacity);
     }
 }
 
-// Перевірка всіх дат на перевищення (при завантаженні та періодично)
+// Перевірка всіх дат на перевищення (при завантаженні та періодично) — з урахуванням напрямку
 function checkAllCapacityWarnings() {
     const totalCapacity = vehicles.reduce((sum, v) => sum + (parseInt(v.seats) || 8), 0);
     if (totalCapacity === 0) return;
 
     const closedStatuses = ['archived', 'refused', 'transferred', 'deleted'];
+    const dir = filters.direction;
     const seatsByDate = {};
-    passengers.filter(p => !closedStatuses.includes(p.status) && p.date).forEach(p => {
+    passengers.filter(p => !closedStatuses.includes(p.status) && p.date).filter(p => !dir || dir === 'all' || p.direction === dir).forEach(p => {
         seatsByDate[p.date] = (seatsByDate[p.date] || 0) + (parseInt(p.seats) || 1);
     });
 
@@ -3012,7 +3111,7 @@ function toggleSelectAll() {
 function clearSelection() { 
     selectedIds.clear(); 
     render(); 
-    // Ховаємо sidebar тільки тут
+    // Ховаємо sidebar і overlay
     const sidebar = document.getElementById('bulkActionsSidebar');
     if (sidebar) sidebar.classList.remove('show');
     const bar = document.getElementById('bulkActionsBar');
@@ -3051,29 +3150,32 @@ function updateBulkBar() {
     const bar = document.getElementById('bulkActionsBar');
     const sidebar = document.getElementById('bulkActionsSidebar');
     const count = selectedIds.size;
-    
+    const isMobile = window.innerWidth < 1100;
+
     // Оновлюємо лічильники
     document.getElementById('bulkCount').textContent = count;
     const sidebarCount = document.getElementById('bulkCountSidebar');
     if (sidebarCount) sidebarCount.textContent = count;
-    
+
     // Mobile bar - показуємо/ховаємо
     bar.classList.toggle('show', count > 0);
-    
-    // PC Sidebar - тільки ПОКАЗУЄМО, не ховаємо (ховає clearSelection)
-    if (sidebar && count > 0) sidebar.classList.add('show');
 
-    // Ховаємо collapse btn коли bulk sidebar відкритий
+    // PC: sidebar (без overlay — ліди мають бути клікабельні)
+    if (!isMobile) {
+        if (sidebar && count > 0) sidebar.classList.add('show');
+    }
+
+    // Ховаємо collapse btn коли bulk sidebar відкритий (тільки PC)
     const collapseBtn = document.getElementById('pcSidebarCollapseBtn');
-    if (collapseBtn) collapseBtn.style.display = count > 0 ? 'none' : '';
+    if (collapseBtn && !isMobile) collapseBtn.style.display = count > 0 ? 'none' : '';
 
-    // Зсув контенту коли bulk sidebar відкритий
+    // Зсув контенту (тільки PC)
     const contentArea = document.querySelector('.main-content-area');
-    if (contentArea) contentArea.classList.toggle('shifted-by-bulk', count > 0);
+    if (contentArea && !isMobile) contentArea.classList.toggle('shifted-by-bulk', count > 0);
 
-    // Ховаємо bottom-nav коли bulk sidebar відкритий
+    // Ховаємо bottom-nav (тільки PC — на мобільному залишаємо)
     const bottomNav = document.querySelector('.bottom-nav');
-    if (bottomNav) {
+    if (bottomNav && !isMobile) {
         bottomNav.classList.toggle('hidden-by-bulk', count > 0);
         bottomNav.style.display = count > 0 ? 'none' : '';
     }
@@ -5737,8 +5839,10 @@ function toggleDirectionPopup() {
 
 function setDirection(dir) {
     filters.direction = dir;
-    filters.showNewOnly = false; // Вимикаємо фільтр "Нові"
-    
+    filters.showNewOnly = false;
+    lastTab = dir;
+    saveSettings();
+
     // Виходимо з режиму маршруту та спеціальних статусів
     filters.statusFilter = '';
     filters.routeVehicle = '';
@@ -5748,32 +5852,39 @@ function setDirection(dir) {
     routeStats = { total: 0, pending: 0, inProgress: 0, completed: 0, cancelled: 0, archived: 0 };
     currentRouteVehicle = null;
     routeStatusFilter = 'all';
-    
+
     document.getElementById('directionPopup')?.classList.remove('show');
-    
+
     // Оновлюємо активні стани
     document.querySelectorAll('.direction-option').forEach(el => {
         el.classList.toggle('active', el.dataset.dir === dir);
     });
-    
+
     // Оновлюємо мобільні
     document.getElementById('mobileDirectionAll')?.classList.toggle('active', dir === 'all');
     document.getElementById('mobileDirectionUaEu')?.classList.toggle('active', dir === 'ua-eu');
     document.getElementById('mobileDirectionEuUa')?.classList.toggle('active', dir === 'eu-ua');
     document.getElementById('mobileNewLeads')?.classList.remove('active');
-    
+
     // Оновлюємо PC sidebar
     document.getElementById('pcDirectionAll')?.classList.toggle('active', dir === 'all');
     document.getElementById('pcDirectionUaEu')?.classList.toggle('active', dir === 'ua-eu');
     document.getElementById('pcDirectionEuUa')?.classList.toggle('active', dir === 'eu-ua');
     document.getElementById('pcNewLeads')?.classList.remove('active');
-    
+
+    // Синхронізуємо dropdown в календарі
+    document.querySelectorAll('.cal-direction-select').forEach(s => s.value = dir);
+
+    // Закриваємо відкриті dropdown
+    document.querySelectorAll('.dropdown-menu').forEach(d => d.classList.remove('show'));
+
     // Оновлюємо label
     const labels = {'all': 'Пасажири', 'ua-eu': '🇺🇦→🇪🇺', 'eu-ua': '🇪🇺→🇺🇦'};
     const navLabel = document.getElementById('navPassengersLabel');
     if (navLabel) navLabel.textContent = labels[dir] || 'Пасажири';
-    
+
     render();
+    renderCalendars();
     updateVehiclesList();
     updateAllCounts();
 }
@@ -5789,21 +5900,26 @@ function showNewLeads() {
     filters.date = '';
     filters.vehicle = '';
     routePassengers = [];
-    
+    lastTab = 'new';
+    saveSettings();
+
     // Оновлюємо активні стани
     document.getElementById('mobileDirectionAll')?.classList.remove('active');
     document.getElementById('mobileDirectionUaEu')?.classList.remove('active');
     document.getElementById('mobileDirectionEuUa')?.classList.remove('active');
     document.getElementById('mobileNewLeads')?.classList.add('active');
-    
+
     document.getElementById('pcDirectionAll')?.classList.remove('active');
     document.getElementById('pcDirectionUaEu')?.classList.remove('active');
     document.getElementById('pcDirectionEuUa')?.classList.remove('active');
     document.getElementById('pcNewLeads')?.classList.add('active');
-    
+
+    // Синхронізуємо dropdown в календарі
+    document.querySelectorAll('.cal-direction-select').forEach(s => s.value = 'all');
+
     const navLabel = document.getElementById('navPassengersLabel');
     if (navLabel) navLabel.textContent = '🆕 Нові';
-    
+
     render();
     updateAllCounts();
     showToast('🆕 Нові заявки за 24 год');
