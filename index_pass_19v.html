@@ -2562,15 +2562,22 @@ function renderCalendarTo(containerId) {
     const months = ['Січень','Лютий','Березень','Квітень','Травень','Червень','Липень','Серпень','Вересень','Жовтень','Листопад','Грудень'];
     const today = new Date().toISOString().split('T')[0];
     
-    // Рахуємо кількість МІСЦЬ (не лідів) на кожну дату (з урахуванням напрямку)
+    // Рахуємо ліди на дату (з урахуванням напрямку) + місця ВСІХ напрямків (для overbooked)
     const seatCounts = {};
     const leadCounts = {};
     const hiddenInCalendar = ['archived', 'refused', 'transferred', 'deleted'];
     const dir = filters.direction;
-    passengers.filter(p => !hiddenInCalendar.includes(p.status)).filter(p => !dir || dir === 'all' || p.direction === dir).forEach(p => {
+    const activePassengers = passengers.filter(p => !hiddenInCalendar.includes(p.status));
+    // Місця — ЗАВЖДИ всі напрямки (авто спільні, місткість загальна)
+    activePassengers.forEach(p => {
+        if(p.date) {
+            seatCounts[p.date] = (seatCounts[p.date]||0) + (parseInt(p.seats) || 1);
+        }
+    });
+    // Ліди — з фільтром напрямку (для badge кількості)
+    activePassengers.filter(p => !dir || dir === 'all' || p.direction === dir).forEach(p => {
         if(p.date) {
             leadCounts[p.date] = (leadCounts[p.date]||0) + 1;
-            seatCounts[p.date] = (seatCounts[p.date]||0) + (parseInt(p.seats) || 1);
         }
     });
     
