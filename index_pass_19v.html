@@ -621,7 +621,7 @@
         
         /* Row 1: Direction, Phone, Seats, Date, Price */
         .card-top-row { display: flex; align-items: center; gap: 8px; flex-wrap: nowrap; min-height: 24px; }
-        .card-direction { font-size: 14px; flex-shrink: 0; width: 32px; text-align: center; }
+        .card-direction { font-size: 14px; flex-shrink: 0; min-width: 56px; width: auto; text-align: center; white-space: nowrap; }
         .card-phone { font-size: 14px; font-weight: 700; color: var(--primary); letter-spacing: 0.3px; white-space: nowrap; min-width: 120px; }
         .card-seats { background: var(--info); color: white; padding: 2px 6px; border-radius: 10px; font-size: 10px; font-weight: 700; flex-shrink: 0; min-width: 36px; text-align: center; }
         .card-date { background: var(--bg-main); color: var(--text-primary); padding: 2px 6px; border-radius: 4px; font-size: 10px; font-weight: 600; flex-shrink: 0; white-space: nowrap; }
@@ -1048,13 +1048,13 @@
                 <span class="section-toggle" id="toggleDirection">▼</span>
             </div>
             <div class="side-menu-collapsible" id="mobileDirectionSection">
+                <div class="side-menu-item" id="mobileNewLeads" onclick="showNewLeads(); closeSideMenu();" style="background:rgba(0,0,0,0.4);">
+                    <span class="side-menu-item-left" style="color:white;font-weight:700;">🆕 Нові (24 год)</span>
+                    <span class="side-menu-item-count" id="mobileCountNew" style="background:var(--accent);color:white;">0</span>
+                </div>
                 <div class="side-menu-item" id="mobileDirectionAll" onclick="setDirection('all'); closeSideMenu();">
                     <span class="side-menu-item-left">📊 Всі напрямки</span>
                     <span class="side-menu-item-count" id="mobileCountAll">0</span>
-                </div>
-                <div class="side-menu-item" id="mobileNewLeads" onclick="showNewLeads(); closeSideMenu();" style="background:rgba(249,115,22,0.15);">
-                    <span class="side-menu-item-left">🆕 Нові (24 год)</span>
-                    <span class="side-menu-item-count" id="mobileCountNew" style="background:var(--accent);color:white;">0</span>
                 </div>
                 <div class="side-menu-item" id="mobileDirectionUaEu" onclick="setDirection('ua-eu'); closeSideMenu();">
                     <span class="side-menu-item-left">🇺🇦→🇪🇺 Україна-Європа</span>
@@ -1166,13 +1166,13 @@
                 <span class="pc-sidebar-toggle" id="pcToggleDirection">▼</span>
             </div>
             <div class="pc-sidebar-content" id="pcSectionDirection">
+                <div class="pc-sidebar-item" id="pcNewLeads" onclick="showNewLeads()" style="color:#000000;">
+                    <span style="color:#000000;"><span class="item-icon">🆕</span>Нові (24 год)</span>
+                    <span class="item-count" id="pcCountNew" style="background:var(--accent);color:white;">0</span>
+                </div>
                 <div class="pc-sidebar-item" id="pcDirectionAll" onclick="setDirection('all')">
                     <span><span class="item-icon">📊</span>Всі напрямки</span>
                     <span class="item-count" id="pcCountAll">0</span>
-                </div>
-                <div class="pc-sidebar-item" id="pcNewLeads" onclick="showNewLeads()" style="background:rgba(249,115,22,0.1);">
-                    <span><span class="item-icon">🆕</span>Нові (24 год)</span>
-                    <span class="item-count" id="pcCountNew" style="background:var(--accent);color:white;">0</span>
                 </div>
                 <div class="pc-sidebar-item" id="pcDirectionUaEu" onclick="setDirection('ua-eu')">
                     <span><span class="item-icon">🇺🇦→🇪🇺</span>Україна-Європа</span>
@@ -1564,7 +1564,10 @@
             <p style="font-size:11px;color:var(--text-secondary);margin-bottom:12px;">Виберіть авто для <strong id="bulkVehicleCount">0</strong> пасажирів:</p>
             <div class="vehicle-select-list" id="bulkVehicleList"></div>
         </div>
-        <div class="modal-footer"><button class="btn-cancel" onclick="closeModal('bulkVehicleModal')">Скасувати</button></div>
+        <div class="modal-footer">
+            <button class="btn-cancel" onclick="closeModal('bulkVehicleModal')">Скасувати</button>
+            <button class="btn-save" id="bulkVehicleConfirmBtn" onclick="confirmBulkAssignVehicle()" style="display:none;">🚐 Призначити</button>
+        </div>
     </div>
 </div>
 
@@ -3040,19 +3043,28 @@ async function loadAllRoutePassengers() {
                 updateLoader(`Обробка: ${route.name}`, `${loaded} / ${routes.length}`);
                 
                 if (data.success && data.passengers && data.passengers.length > 0) {
-                    // Знаходимо відповідне авто
-                    const matchedVehicle = vehicles.find(v => 
-                        v.name === route.name || 
+                    // Знаходимо відповідне авто (точний збіг по routeSheet або name)
+                    const matchedVehicle = vehicles.find(v =>
                         v.routeSheet === route.name ||
+                        v.name === route.name
+                    );
+
+                    // Якщо не знайшли точний збіг - шукаємо по включенню
+                    const finalVehicle = matchedVehicle || vehicles.find(v =>
                         route.name.includes(v.name)
                     );
-                    
-                    const mapped = data.passengers.map((p, idx) => ({
+
+                    // Фільтруємо тільки валідних пасажирів (мають хоча б телефон або ім'я)
+                    const validPassengers = data.passengers.filter(p =>
+                        (p.phone && p.phone.trim()) || (p.name && p.name.trim()) || (p.id && p.id.trim())
+                    );
+
+                    const mapped = validPassengers.map((p, idx) => ({
                         ...p,
                         _uid: `route_${route.name.replace(/\s+/g, '_')}_${idx}`,
                         _isRouteData: true,
-                        _vehicleId: matchedVehicle?.id || route.name,
-                        _vehicleName: route.name
+                        _vehicleId: finalVehicle?.id || route.name,
+                        _vehicleName: finalVehicle?.name || route.name
                     }));
                     routePassengers = routePassengers.concat(mapped);
                     
@@ -3520,12 +3532,37 @@ function bulkMarkNotified() {
 }
 
 // BULK ACTIONS
+let selectedBulkVehicleId = null;
+
 function openBulkVehicleModal() {
+    selectedBulkVehicleId = null;
     document.getElementById('bulkVehicleCount').textContent = selectedIds.size;
-    document.getElementById('bulkVehicleList').innerHTML = vehicles.map(v => 
-        `<div class="vehicle-select-item" onclick="bulkAssignVehicle('${v.id}')"><span class="vehicle-select-name">🚐 ${v.name}</span><span class="vehicle-select-info">${v.seats} місць</span></div>`
+    document.getElementById('bulkVehicleList').innerHTML = vehicles.map(v =>
+        `<div class="vehicle-select-item" id="vsi_${v.id}" onclick="selectBulkVehicle('${v.id}')"><span class="vehicle-select-name">🚐 ${v.name}</span><span class="vehicle-select-info">${v.seats} місць</span></div>`
     ).join('');
+    document.getElementById('bulkVehicleConfirmBtn').style.display = 'none';
     document.getElementById('bulkVehicleModal').classList.add('show');
+}
+
+function selectBulkVehicle(vehicleId) {
+    selectedBulkVehicleId = vehicleId;
+    // Підсвічуємо вибране авто
+    document.querySelectorAll('#bulkVehicleList .vehicle-select-item').forEach(el => {
+        el.style.borderColor = '';
+        el.style.background = '';
+    });
+    const selected = document.getElementById('vsi_' + vehicleId);
+    if (selected) {
+        selected.style.borderColor = 'var(--info)';
+        selected.style.background = '#f0f7ff';
+    }
+    // Показуємо кнопку підтвердження
+    document.getElementById('bulkVehicleConfirmBtn').style.display = 'inline-block';
+}
+
+function confirmBulkAssignVehicle() {
+    if (!selectedBulkVehicleId) return showToast('⚠️ Оберіть авто');
+    bulkAssignVehicle(selectedBulkVehicleId);
 }
 
 function bulkAssignVehicle(vehicleId) {
@@ -3964,17 +4001,29 @@ function applyStatusToSelected(status, note) {
 
 // Показати фільтр по статусу
 function showStatusFilter(status) {
+    // Скидаємо ВСІ фільтри щоб нічого не ховало записи
     filters.showArchive = false;
     filters.statusFilter = '';
     filters.routeVehicle = '';
+    filters.direction = 'all';
+    filters.date = '';
+    filters.vehicle = '';
+    filters.showNewOnly = false;
+    filters.search = '';
     filters.specialStatus = status; // Новий фільтр
-    
+
     routePassengers = [];
     currentRouteVehicle = null;
-    
+    routeStatusFilter = 'all';
+
+    // Очищаємо поле пошуку в UI
+    const searchInput = document.getElementById('searchInput');
+    if (searchInput) searchInput.value = '';
+
     render();
     updateAllCounts();
     updateFilterButtons();
+    renderCalendars();
     showToast(`📋 ${getStatusName(status)}`);
 }
 
@@ -4074,12 +4123,40 @@ function startOptimization() {
     const startAddress = document.getElementById('optimizeStart').value.trim();
     const endAddress = document.getElementById('optimizeEnd').value.trim();
     
-    // Додаємо uid до кожного пасажира
+    // Чистимо дані - відправляємо тільки потрібні поля з явними адресами
     const passengersWithUid = optimizePassengersList.map(p => ({
-        ...p,
-        _uid: (p._sheet && p._rowNum) ? `${p._sheet}_${p._rowNum}` : null
+        id: p.id || '',
+        name: p.name || '',
+        phone: p.phone || '',
+        from: p.from || '',
+        to: p.to || '',
+        seats: p.seats || 1,
+        payment: p.payment || '',
+        direction: p.direction || '',
+        date: p.date || '',
+        vehicle: p.vehicle || '',
+        _uid: (p._sheet && p._rowNum) ? `${p._sheet}_${p._rowNum}` : null,
+        _sheet: p._sheet || '',
+        _rowNum: p._rowNum || ''
     }));
-    
+
+    // Перевіряємо чи є адреси для оптимізації
+    const addressField = optimizeBy === 'from' ? 'from' : 'to';
+    const withAddress = passengersWithUid.filter(p => p[addressField] && p[addressField].trim());
+    const withoutAddress = passengersWithUid.filter(p => !p[addressField] || !p[addressField].trim());
+
+    if (withAddress.length === 0) {
+        document.getElementById('optimizeFormBody').style.display = 'block';
+        document.getElementById('optimizeLoadingBody').style.display = 'none';
+        document.getElementById('optimizeFormFooter').style.display = 'flex';
+        showToast(`❌ Жоден лід не має адреси (поле "${addressField === 'from' ? 'Звідки' : 'Куди'}")`);
+        return;
+    }
+
+    if (withoutAddress.length > 0) {
+        showToast(`⚠️ ${withoutAddress.length} лідів без адреси - будуть пропущені`);
+    }
+
     const payload = {
         action: 'optimize',
         payload: {
