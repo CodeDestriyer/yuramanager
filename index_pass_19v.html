@@ -2943,6 +2943,12 @@ function findPassengerByUid(uid) {
 function toggleDetails(uid) {
     const p = findPassengerByUid(uid);
     if (p?.isNew) { p.isNew = false; saveSettings(); }
+    // Закриваємо дії інших карток
+    if (openActionsId) {
+        document.querySelector(`[data-uid="${openActionsId}"] .card-actions`)?.classList.remove('show');
+        document.querySelector(`[data-uid="${openActionsId}"] .card-actions-toggle`)?.classList.remove('open');
+        openActionsId = null;
+    }
     if (openDetailsId && openDetailsId !== uid) document.querySelector(`[data-uid="${openDetailsId}"] .card-details`)?.classList.remove('show');
     openDetailsId = openDetailsId === uid ? null : uid;
     document.querySelector(`[data-uid="${uid}"] .card-details`)?.classList.toggle('show', openDetailsId === uid);
@@ -2954,6 +2960,11 @@ function toggleActions(uid) {
     if (openActionsId && openActionsId !== uid) {
         document.querySelector(`[data-uid="${openActionsId}"] .card-actions`)?.classList.remove('show');
         document.querySelector(`[data-uid="${openActionsId}"] .card-actions-toggle`)?.classList.remove('open');
+    }
+    // Закриваємо деталі інших карток
+    if (openDetailsId && openDetailsId !== uid) {
+        document.querySelector(`[data-uid="${openDetailsId}"] .card-details`)?.classList.remove('show');
+        openDetailsId = null;
     }
     openActionsId = openActionsId === uid ? null : uid;
     document.querySelector(`[data-uid="${uid}"] .card-actions`)?.classList.toggle('show', openActionsId === uid);
@@ -3979,8 +3990,8 @@ function bulkAssignVehicle(vehicleId) {
     });
     saveSettings();
     closeModal('bulkVehicleModal');
-    clearSelection();
     render();
+    updateBulkBar();
     updateAllCounts();
     updateVehiclesList();
     showToast(`🚐 ${veh.name} призначено: ${count}`);
@@ -4162,8 +4173,8 @@ function executeCopyToRoute(byVehicle, withVehicle, conflictAction) {
                 p.mark = 'Маршрут';
             });
             saveSettings();
-            clearSelection();
             render();
+            updateBulkBar();
             updateAllCounts();
 
             let msg = `🚀 ${data.copied} записано в маршрут`;
@@ -5005,8 +5016,8 @@ function applyOptimizedOrder(orderedPassengers, notGeocodedList) {
     });
     
     saveSettings();
-    clearSelection();
     render();
+    updateBulkBar();
     updateAllCounts();
 }
 
