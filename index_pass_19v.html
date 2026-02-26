@@ -511,11 +511,13 @@
         .side-menu .calendar-day.has-leads { background: rgba(59,130,246,0.3); color: white; }
         .side-menu .calendar-day.overbooked { background: rgba(239,68,68,0.3) !important; border: 1px solid #ef4444 !important; }
         .side-menu .calendar-day-count {
-            font-size: 8px;
-            padding: 1px 3px;
-            min-width: 12px;
-            top: -3px;
-            right: -3px;
+            font-size: 7px;
+            padding: 1px 2px;
+            min-width: 10px;
+            top: 1px;
+            left: 50%;
+            right: auto;
+            transform: translateX(-50%);
             background: #3b82f6;
             white-space: nowrap;
         }
@@ -557,7 +559,7 @@
         .calendar-day.selected { background: var(--primary); color: white; }
         .calendar-day.has-leads { background: #dbeafe; color: var(--info); font-weight: 700; }
         .calendar-day.has-leads.selected { background: var(--primary); color: white; }
-        .calendar-day-count { position: absolute; top: -4px; right: -4px; font-size: 9px; font-weight: 700; color: white; background: var(--accent); padding: 2px 4px; border-radius: 8px; line-height: 1; min-width: 14px; text-align: center; z-index: 1; white-space: nowrap; }
+        .calendar-day-count { position: absolute; top: 1px; left: 50%; transform: translateX(-50%); font-size: 8px; font-weight: 700; color: white; background: var(--accent); padding: 1px 3px; border-radius: 6px; line-height: 1; min-width: 12px; text-align: center; white-space: nowrap; }
         .calendar-day.selected .calendar-day-count { background: rgba(255,255,255,0.9); color: var(--primary); }
         .calendar-day.overbooked { background: #fee2e2 !important; border: 2px solid #ef4444 !important; }
         .calendar-day.overbooked .calendar-day-count { background: #ef4444; }
