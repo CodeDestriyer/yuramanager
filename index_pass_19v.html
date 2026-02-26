@@ -1707,8 +1707,8 @@
         <div class="modal-body" id="optimizeLoadingBody" style="display:none">
             <div class="optimize-loading">
                 <div class="optimize-spinner"></div>
-                <div class="optimize-loading-text">Оптимізація маршруту...</div>
-                <small>Це може зайняти 10-30 секунд</small>
+                <div class="optimize-loading-text" id="optimizeLoadingText">Оптимізація маршруту...</div>
+                <small id="optimizeLoadingProgress">Це може зайняти 10-30 секунд</small>
             </div>
         </div>
         
@@ -4143,18 +4143,41 @@ function sleep(ms) { return new Promise(r => setTimeout(r, ms)); }
 // Геокодування однієї адреси через Google Maps JS API
 function geocodeClient(address) {
     return new Promise(resolve => {
-        if (!window.mapsGeocoder) return resolve(null);
-        window.mapsGeocoder.geocode({ address: address }, (results, status) => {
-            if (status === 'OK' && results && results[0]) {
-                resolve({
-                    lat: results[0].geometry.location.lat(),
-                    lng: results[0].geometry.location.lng()
-                });
-            } else {
-                console.warn('Geocode failed:', address, '→', status);
+        if (!window.mapsGeocoder) {
+            console.warn('Geocode skipped: mapsGeocoder not available');
+            return resolve(null);
+        }
+        let settled = false;
+        const timeout = setTimeout(() => {
+            if (!settled) {
+                settled = true;
+                console.warn('Geocode timeout (10s):', address);
                 resolve(null);
             }
-        });
+        }, 10000);
+        try {
+            window.mapsGeocoder.geocode({ address: address }, (results, status) => {
+                if (settled) return;
+                settled = true;
+                clearTimeout(timeout);
+                if (status === 'OK' && results && results[0]) {
+                    resolve({
+                        lat: results[0].geometry.location.lat(),
+                        lng: results[0].geometry.location.lng()
+                    });
+                } else {
+                    console.warn('Geocode failed:', address, '→', status);
+                    resolve(null);
+                }
+            });
+        } catch(e) {
+            if (!settled) {
+                settled = true;
+                clearTimeout(timeout);
+                console.error('Geocode exception:', e);
+                resolve(null);
+            }
+        }
     });
 }
 
@@ -4162,6 +4185,14 @@ function geocodeClient(address) {
 function optimizeDirectionsClient(geocodedPassengers, startCoords, endCoords) {
     return new Promise((resolve, reject) => {
         if (!window.mapsDirections) return reject(new Error('Maps API not ready'));
+
+        let settled = false;
+        const timeout = setTimeout(() => {
+            if (!settled) {
+                settled = true;
+                reject(new Error('Directions API timeout (30s)'));
+            }
+        }, 30000);
 
         const waypoints = geocodedPassengers.map(p => ({
             location: new google.maps.LatLng(p.coords.lat, p.coords.lng),
@@ -4186,6 +4217,9 @@ function optimizeDirectionsClient(geocodedPassengers, startCoords, endCoords) {
             optimizeWaypoints: true,
             travelMode: google.maps.TravelMode.DRIVING
         }, (response, status) => {
+            if (settled) return;
+            settled = true;
+            clearTimeout(timeout);
             if (status === 'OK') {
                 const order = response.routes[0].waypoint_order;
                 if (endCoords) {
@@ -4284,8 +4318,11 @@ function generateOptimizeMapLinks(orderedPassengers, startAddr, endAddr) {
 // ГОЛОВНА ФУНКЦІЯ ОПТИМІЗАЦІЇ (клієнтська)
 async function startOptimization() {
     if (!optimizePassengersList.length) return;
-    if (!window.mapsApiReady) {
-        showToast('⏳ Google Maps API ще завантажується, зачекайте...');
+
+    // Перевірка Maps API
+    if (!window.mapsApiReady || !window.mapsGeocoder) {
+        showToast('❌ Google Maps API не завантажено. Перезавантажте сторінку.');
+        console.error('Maps API state:', { ready: window.mapsApiReady, geocoder: !!window.mapsGeocoder, directions: !!window.mapsDirections });
         return;
     }
 
@@ -4293,6 +4330,14 @@ async function startOptimization() {
     document.getElementById('optimizeFormBody').style.display = 'none';
     document.getElementById('optimizeLoadingBody').style.display = 'block';
     document.getElementById('optimizeFormFooter').style.display = 'none';
+
+    // Хелпер для оновлення тексту в модалці оптимізації
+    function updateOptStatus(text, progress) {
+        const el = document.getElementById('optimizeLoadingText');
+        const pr = document.getElementById('optimizeLoadingProgress');
+        if (el && text) el.textContent = text;
+        if (pr && progress !== undefined) pr.textContent = progress;
+    }
 
     const startAddress = document.getElementById('optimizeStart').value.trim() || 'Ужгород';
     const endAddress = document.getElementById('optimizeEnd').value.trim();
@@ -4326,12 +4371,13 @@ async function startOptimization() {
         }
 
         // 2. Геокодуємо всі адреси
-        updateLoader('Геокодування адрес...', `0 / ${withAddress.length}`);
+        updateOptStatus('Геокодування адрес...', `0 / ${withAddress.length}`);
         const geocoded = [];
         const notGeocodedList = [];
 
         for (let i = 0; i < withAddress.length; i++) {
-            updateLoader(`📍 ${withAddress[i].address}`, `${i + 1} / ${withAddress.length}`);
+            const shortAddr = withAddress[i].address.length > 30 ? withAddress[i].address.substring(0, 30) + '...' : withAddress[i].address;
+            updateOptStatus(`📍 ${shortAddr}`, `${i + 1} / ${withAddress.length}`);
 
             const coords = await geocodeClient(withAddress[i].address);
             if (coords) {
@@ -4351,20 +4397,20 @@ async function startOptimization() {
         }
 
         if (geocoded.length === 0) {
-            throw new Error('Жодну адресу не вдалось геокодувати! Перевірте адреси пасажирів.');
+            throw new Error('Жодну адресу не вдалось геокодувати! Перевірте що Maps JavaScript API увімкнено в Google Cloud Console.');
         }
 
         // 3. Геокодуємо старт та фініш
-        updateLoader('📍 Геокодування старту...', '');
+        updateOptStatus('📍 Геокодування старту...', '');
         const startCoords = await geocodeClient(startAddress) || { lat: 48.6209, lng: 22.2879 };
         let endCoords = null;
         if (endAddress) {
-            updateLoader('📍 Геокодування фінішу...', '');
+            updateOptStatus('📍 Геокодування фінішу...', '');
             endCoords = await geocodeClient(endAddress);
         }
 
         // 4. Оптимізація маршруту
-        updateLoader('🗺️ Оптимізація маршруту...', `${geocoded.length} точок`);
+        updateOptStatus('🗺️ Оптимізація маршруту...', `${geocoded.length} точок`);
         let optimizedOrder = null;
         let method = '';
 
