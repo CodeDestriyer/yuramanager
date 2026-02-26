@@ -2455,7 +2455,8 @@ function renderCalendarTo(containerId) {
     // Рахуємо кількість МІСЦЬ (не лідів) на кожну дату
     const seatCounts = {};
     const leadCounts = {};
-    passengers.filter(p => p.status !== 'archived').forEach(p => { 
+    const hiddenInCalendar = ['archived', 'refused', 'transferred', 'deleted'];
+    passengers.filter(p => !hiddenInCalendar.includes(p.status)).forEach(p => {
         if(p.date) {
             leadCounts[p.date] = (leadCounts[p.date]||0) + 1;
             seatCounts[p.date] = (seatCounts[p.date]||0) + (parseInt(p.seats) || 1);
@@ -4569,31 +4570,69 @@ function confirmDelete() {
 // ВИДАЛИТИ НАЗАВЖДИ
 function bulkDeleteForever() {
     if (selectedIds.size === 0) return showToast('⚠️ Оберіть заявки');
-    
+
     if (!confirm(`💀 УВАГА!\n\nВи точно хочете НАЗАВЖДИ видалити ${selectedIds.size} заявок?\n\nЦю дію НЕ МОЖНА скасувати!`)) {
         return;
     }
-    
+
     showLoader('Видаляю назавжди...', '');
-    
-    // TODO: API для повного видалення
-    // Поки що просто ховаємо локально
+
+    // Збираємо серверні та локальні записи
+    const serverPassengers = [];
+    const localUids = [];
+
     selectedIds.forEach(uid => {
-        const idx = passengers.findIndex(p => {
-            const pUid = (p._sheet && p._rowNum) ? `${p._sheet}_${p._rowNum}` : `local_${passengers.indexOf(p)}`;
-            return pUid === uid;
-        });
-        if (idx !== -1) {
-            passengers.splice(idx, 1);
+        const p = findPassengerByUid(uid);
+        if (p && p._sheet && p._rowNum) {
+            serverPassengers.push({ sheet: p._sheet, rowNum: p._rowNum });
         }
+        localUids.push(uid);
     });
-    
-    hideLoader();
-    clearSelection();
-    saveSettings();
-    render();
-    updateAllCounts();
-    showToast(`💀 Видалено назавжди: ${selectedIds.size}`);
+
+    const removeLocally = () => {
+        localUids.forEach(uid => {
+            const idx = passengers.findIndex(p => {
+                const pUid = (p._sheet && p._rowNum) ? `${p._sheet}_${p._rowNum}` : `local_${passengers.indexOf(p)}`;
+                return pUid === uid;
+            });
+            if (idx !== -1) passengers.splice(idx, 1);
+        });
+        hideLoader();
+        clearSelection();
+        saveSettings();
+        render();
+        updateAllCounts();
+        renderCalendars();
+        showToast(`💀 Видалено назавжди: ${localUids.length}`);
+    };
+
+    // Якщо є серверні записи — видаляємо через API
+    if (serverPassengers.length > 0) {
+        fetch(ROUTE_API_URL, {
+            method: 'POST',
+            headers: { 'Content-Type': 'text/plain' },
+            body: JSON.stringify({
+                action: 'deletePassengersPermanently',
+                payload: { passengers: serverPassengers }
+            })
+        })
+        .then(r => r.json())
+        .then(data => {
+            if (data.success) {
+                removeLocally();
+            } else {
+                hideLoader();
+                showToast('❌ ' + (data.error || 'Помилка видалення'));
+            }
+        })
+        .catch(err => {
+            console.error('Delete forever error:', err);
+            // Все одно видаляємо локально
+            removeLocally();
+        });
+    } else {
+        removeLocally();
+    }
 }
 
 // Універсальна функція застосування статусу
@@ -5516,23 +5555,23 @@ function confirmDeletePassenger(uid) {
     const p = findPassengerByUid(uid);
     if (!p) return;
     
-    // Встановлюємо статус archived та дату
-    p.status = 'archived';
-    p.archiveDate = new Date().toISOString().split('T')[0];
+    // Встановлюємо статус deleted та дату
+    p.status = 'deleted';
+    p.statusDate = new Date().toISOString().split('T')[0];
     p.isNew = false;
-    
+
     // Закриваємо дії картки
     openActionsId = null;
-    
-    // Якщо є серверні дані - архівуємо на сервері
+
+    // Якщо є серверні дані - видаляємо на сервері
     if (p._sheet && p._rowNum) {
         showLoader('Видалення...', '');
-        
-        fetch(API_URL, {
+
+        fetch(ROUTE_API_URL, {
             method: 'POST',
             headers: { 'Content-Type': 'text/plain' },
             body: JSON.stringify({
-                action: 'archivePassengers',
+                action: 'deletePassengers',
                 payload: {
                     passengers: [{ sheet: p._sheet, rowNum: p._rowNum }]
                 }
@@ -5545,7 +5584,8 @@ function confirmDeletePassenger(uid) {
                 saveSettings();
                 render();
                 updateAllCounts();
-                showToast('🗑️ Переміщено в архів');
+                renderCalendars();
+                showToast('🗑️ Видалено');
             } else {
                 showToast('❌ ' + (data.error || 'Помилка'));
             }
@@ -5553,10 +5593,10 @@ function confirmDeletePassenger(uid) {
         .catch(err => {
             hideLoader();
             console.error('Delete error:', err);
-            // Все одно зберігаємо локально
             saveSettings();
             render();
             updateAllCounts();
+            renderCalendars();
             showToast('🗑️ Видалено локально');
         });
     } else {
@@ -5564,7 +5604,8 @@ function confirmDeletePassenger(uid) {
         saveSettings();
         render();
         updateAllCounts();
-        showToast('🗑️ Переміщено в архів');
+        renderCalendars();
+        showToast('🗑️ Видалено');
     }
 }
 
@@ -5949,7 +5990,7 @@ function updatePassengerOnServer(passenger) {
         showToast('⚠️ Синхронізуй спочатку');
         return;
     }
-    
+
     const payload = {
         action: 'updatePassenger',
         payload: {
@@ -5970,10 +6011,12 @@ function updatePassengerOnServer(passenger) {
             vehicle: passenger.vehicle,
             timing: passenger.timing,
             dateReg: passenger.dateReg,
-            note: passenger.note
+            note: passenger.note,
+            status: passenger.status || '',
+            statusDate: passenger.statusDate || ''
         }
     };
-    
+
     fetch(API_URL, {
         method: 'POST',
         headers: { 'Content-Type': 'text/plain' },
