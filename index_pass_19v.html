@@ -823,7 +823,185 @@
         .bulk-sidebar-close-btn:hover {
             background: rgba(255,255,255,0.1);
         }
-        
+
+        /* COLLAPSIBLE SECONDARY ACTIONS */
+        .bulk-sidebar-more-toggle {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            padding: 10px 14px;
+            border: 1px dashed rgba(255,255,255,0.3);
+            border-radius: 8px;
+            background: transparent;
+            color: rgba(255,255,255,0.7);
+            font-family: inherit;
+            font-size: 12px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            width: 100%;
+        }
+        .bulk-sidebar-more-toggle:hover {
+            background: rgba(255,255,255,0.1);
+            color: white;
+            border-color: rgba(255,255,255,0.5);
+        }
+        .bulk-sidebar-more-toggle .toggle-arrow {
+            transition: transform 0.3s ease;
+            font-size: 10px;
+        }
+        .bulk-sidebar-more-toggle.expanded .toggle-arrow {
+            transform: rotate(180deg);
+        }
+        .bulk-sidebar-secondary {
+            max-height: 0;
+            overflow: hidden;
+            transition: max-height 0.3s ease, opacity 0.3s ease;
+            opacity: 0;
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+        }
+        .bulk-sidebar-secondary.expanded {
+            max-height: 300px;
+            opacity: 1;
+        }
+
+        /* ROUTE PROGRESS TOAST */
+        .route-progress-bar {
+            position: fixed;
+            top: 52px;
+            left: 0;
+            right: 0;
+            height: 3px;
+            background: rgba(0,0,0,0.1);
+            z-index: 1100;
+            overflow: hidden;
+        }
+        .route-progress-bar .bar {
+            height: 100%;
+            background: linear-gradient(90deg, #3b82f6, #8b5cf6, #3b82f6);
+            background-size: 200% 100%;
+            animation: routeProgressShimmer 1.5s ease infinite;
+            width: 100%;
+        }
+        @keyframes routeProgressShimmer {
+            0% { background-position: 200% 0; }
+            100% { background-position: -200% 0; }
+        }
+        /* ROUTE CONFLICT MODAL - redesigned */
+        .route-conflict-overlay {
+            position: fixed;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background: rgba(0,0,0,0.5);
+            backdrop-filter: blur(4px);
+            z-index: 1100;
+            display: flex;
+            align-items: flex-end;
+            justify-content: center;
+            padding: 0;
+            opacity: 0;
+            transition: opacity 0.25s ease;
+        }
+        .route-conflict-overlay.show { opacity: 1; }
+        .route-conflict-sheet {
+            background: white;
+            border-radius: 16px 16px 0 0;
+            width: 100%;
+            max-width: 420px;
+            transform: translateY(100%);
+            transition: transform 0.35s cubic-bezier(0.32, 0.72, 0, 1);
+            box-shadow: 0 -10px 40px rgba(0,0,0,0.15);
+            overflow: hidden;
+        }
+        .route-conflict-overlay.show .route-conflict-sheet {
+            transform: translateY(0);
+        }
+        .route-conflict-handle {
+            width: 36px;
+            height: 4px;
+            background: #d1d5db;
+            border-radius: 2px;
+            margin: 10px auto;
+        }
+        .route-conflict-title {
+            font-size: 15px;
+            font-weight: 700;
+            color: #1f2937;
+            padding: 4px 20px 12px;
+            text-align: center;
+        }
+        .route-conflict-info {
+            padding: 0 20px 12px;
+        }
+        .route-conflict-item {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 10px 12px;
+            background: #f8fafc;
+            border-radius: 10px;
+            margin-bottom: 6px;
+        }
+        .route-conflict-item-icon {
+            width: 36px;
+            height: 36px;
+            background: linear-gradient(135deg, #3b82f6, #1d4ed8);
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 16px;
+            flex-shrink: 0;
+        }
+        .route-conflict-item-text {
+            font-size: 13px;
+            font-weight: 600;
+            color: #374151;
+        }
+        .route-conflict-item-sub {
+            font-size: 11px;
+            color: #9ca3af;
+            font-weight: 400;
+        }
+        .route-conflict-actions {
+            padding: 12px 16px 20px;
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 8px;
+        }
+        .route-conflict-btn {
+            padding: 12px 10px;
+            border: none;
+            border-radius: 12px;
+            font-family: inherit;
+            font-size: 12px;
+            font-weight: 700;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 4px;
+        }
+        .route-conflict-btn:active { transform: scale(0.96); }
+        .route-conflict-btn.cancel { background: #f3f4f6; color: #6b7280; grid-column: 1 / -1; }
+        .route-conflict-btn.cancel:hover { background: #e5e7eb; }
+        .route-conflict-btn.add { background: linear-gradient(135deg, #3b82f6, #2563eb); color: white; }
+        .route-conflict-btn.add:hover { box-shadow: 0 4px 12px rgba(59,130,246,0.4); }
+        .route-conflict-btn.archive { background: linear-gradient(135deg, #f59e0b, #d97706); color: white; }
+        .route-conflict-btn.archive:hover { box-shadow: 0 4px 12px rgba(245,158,11,0.4); }
+        .route-conflict-btn.clear { background: linear-gradient(135deg, #ef4444, #dc2626); color: white; }
+        .route-conflict-btn.clear:hover { box-shadow: 0 4px 12px rgba(239,68,68,0.4); }
+        .route-conflict-btn .btn-emoji { font-size: 20px; }
+        .route-conflict-btn .btn-label { font-size: 11px; }
+
+        @media (min-width: 600px) {
+            .route-conflict-overlay { align-items: center; padding: 20px; }
+            .route-conflict-sheet { border-radius: 16px; max-width: 400px; }
+        }
+
         /* Стара панель - приховуємо на PC */
         @media (min-width: 1100px) {
             .bulk-actions-bar { display: none !important; }
@@ -861,6 +1039,8 @@
             .bulk-sidebar-divider { margin: 6px 0; }
             .bulk-sidebar-close { padding: 8px; }
             .bulk-sidebar-close-btn { padding: 10px; font-size: 12px; }
+            .bulk-sidebar-more-toggle { padding: 8px 10px; font-size: 11px; }
+            .bulk-sidebar-secondary .bulk-sidebar-btn { padding: 8px 10px; font-size: 11px; }
         }
 
         /* VEHICLE BADGE ON CARD */
@@ -1460,19 +1640,23 @@
             <span class="btn-icon">🔔</span> Сповіщено
         </button>
         <div class="bulk-sidebar-divider"></div>
-        <button class="bulk-sidebar-btn" onclick="bulkRefuse()">
-            <span class="btn-icon">❌</span> Відмова
+        <button class="bulk-sidebar-more-toggle" id="bulkMoreToggle" onclick="toggleBulkSecondary()">
+            <span>Ще дії</span> <span class="toggle-arrow">▼</span>
         </button>
-        <button class="bulk-sidebar-btn" onclick="bulkTransfer()">
-            <span class="btn-icon">🤝</span> Пересадка
-        </button>
-        <button class="bulk-sidebar-btn" onclick="bulkDelete()">
-            <span class="btn-icon">🗑️</span> Видалити
-        </button>
-        <button class="bulk-sidebar-btn" onclick="bulkArchive()">
-            <span class="btn-icon">📦</span> В архів
-        </button>
-        <div class="bulk-sidebar-divider"></div>
+        <div class="bulk-sidebar-secondary" id="bulkSecondaryActions">
+            <button class="bulk-sidebar-btn" onclick="bulkRefuse()">
+                <span class="btn-icon">❌</span> Відмова
+            </button>
+            <button class="bulk-sidebar-btn" onclick="bulkTransfer()">
+                <span class="btn-icon">🤝</span> Пересадка
+            </button>
+            <button class="bulk-sidebar-btn" onclick="bulkDelete()">
+                <span class="btn-icon">🗑️</span> Видалити
+            </button>
+            <button class="bulk-sidebar-btn" onclick="bulkArchive()">
+                <span class="btn-icon">📦</span> В архів
+            </button>
+        </div>
         <button class="bulk-sidebar-btn" id="btnSidebarRestore" onclick="bulkRestore()" style="display:none;">
             <span class="btn-icon">↩️</span> Відновити
         </button>
@@ -3625,9 +3809,9 @@ function bulkMoveToRoute() {
         byVehicle[vName].push(p);
     });
     
-    // Показуємо завантаження
-    showToast('🔍 Перевіряю маршрути...');
-    
+    // Показуємо ненав'язливий прогрес
+    showRouteProgress();
+
     // Спочатку перевіряємо чи є записи в маршрутах
     fetch(ROUTE_API_URL, {
         method: 'POST',
@@ -3654,61 +3838,117 @@ function bulkMoveToRoute() {
     });
 }
 
-// Модалка конфлікту маршрутів
+// Toggle collapsible secondary bulk actions
+function toggleBulkSecondary() {
+    const sec = document.getElementById('bulkSecondaryActions');
+    const tog = document.getElementById('bulkMoreToggle');
+    if (sec.classList.contains('expanded')) {
+        sec.classList.remove('expanded');
+        tog.classList.remove('expanded');
+    } else {
+        sec.classList.add('expanded');
+        tog.classList.add('expanded');
+    }
+}
+
+// Route progress bar helpers
+function showRouteProgress() {
+    let bar = document.getElementById('routeProgressBar');
+    if (!bar) {
+        bar = document.createElement('div');
+        bar.className = 'route-progress-bar';
+        bar.id = 'routeProgressBar';
+        bar.innerHTML = '<div class="bar"></div>';
+        document.body.appendChild(bar);
+    }
+    bar.style.display = 'block';
+}
+function hideRouteProgress() {
+    const bar = document.getElementById('routeProgressBar');
+    if (bar) bar.style.display = 'none';
+}
+
+// Модалка конфлікту маршрутів - redesigned as bottom sheet
 function showRouteConflictModal(existing, byVehicle, withVehicle) {
-    const list = existing.map(e => `<div style="padding:8px;background:var(--bg-main);border-radius:6px;margin-bottom:6px;">
-        <strong>🚐 ${e.vehicle}</strong>: ${e.count} записів
-    </div>`).join('');
-    
-    const modal = document.createElement('div');
-    modal.className = 'modal-overlay show';
-    modal.id = 'routeConflictModal';
-    modal.innerHTML = `
-        <div class="modal" style="max-width:380px">
-            <div class="modal-header" style="background:var(--warning)">
-                <span class="modal-title">⚠️ В маршрутах вже є записи</span>
-                <button class="modal-close" onclick="closeModal('routeConflictModal')">×</button>
+    hideRouteProgress();
+
+    const list = existing.map(e => `
+        <div class="route-conflict-item">
+            <div class="route-conflict-item-icon">🚐</div>
+            <div>
+                <div class="route-conflict-item-text">${e.vehicle}</div>
+                <div class="route-conflict-item-sub">${e.count} записів у маршруті</div>
             </div>
-            <div class="modal-body">
-                <p style="font-size:12px;color:var(--text-secondary);margin-bottom:12px;">
-                    Знайдено існуючі записи в маршрутах:
-                </p>
+        </div>
+    `).join('');
+
+    const overlay = document.createElement('div');
+    overlay.className = 'route-conflict-overlay';
+    overlay.id = 'routeConflictModal';
+    overlay.innerHTML = `
+        <div class="route-conflict-sheet">
+            <div class="route-conflict-handle"></div>
+            <div class="route-conflict-title">В маршрутах вже є записи</div>
+            <div class="route-conflict-info">
                 ${list}
-                <p style="font-size:12px;color:var(--text-secondary);margin-top:12px;">
-                    Що зробити зі старими записами?
-                </p>
             </div>
-            <div class="modal-footer" style="flex-wrap:wrap;gap:6px;">
-                <button class="btn-cancel" onclick="closeModal('routeConflictModal')" style="flex:1 1 45%;">❌ Скасувати</button>
-                <button class="btn-save" onclick="handleRouteConflict('add')" style="flex:1 1 45%;background:var(--info);">➕ Додати</button>
-                <button class="btn-save" onclick="handleRouteConflict('archive')" style="flex:1 1 45%;background:var(--warning);">📦 Архівувати</button>
-                <button class="btn-save" onclick="handleRouteConflict('clear')" style="flex:1 1 45%;background:var(--danger);">🗑️ Очистити</button>
+            <div class="route-conflict-actions">
+                <button class="route-conflict-btn add" onclick="handleRouteConflict('add')">
+                    <span class="btn-emoji">➕</span>
+                    <span class="btn-label">Додати</span>
+                </button>
+                <button class="route-conflict-btn archive" onclick="handleRouteConflict('archive')">
+                    <span class="btn-emoji">📦</span>
+                    <span class="btn-label">Архівувати старі</span>
+                </button>
+                <button class="route-conflict-btn clear" onclick="handleRouteConflict('clear')">
+                    <span class="btn-emoji">🗑️</span>
+                    <span class="btn-label">Очистити старі</span>
+                </button>
+                <button class="route-conflict-btn cancel" onclick="closeRouteConflict()">
+                    Скасувати
+                </button>
             </div>
         </div>
     `;
-    document.body.appendChild(modal);
-    
-    // Зберігаємо дані для використання
+
+    // Close on overlay click
+    overlay.addEventListener('click', (e) => {
+        if (e.target === overlay) closeRouteConflict();
+    });
+
+    document.body.appendChild(overlay);
+    // Trigger animation
+    requestAnimationFrame(() => overlay.classList.add('show'));
+
     window._routeConflictData = { byVehicle, withVehicle };
+}
+
+function closeRouteConflict() {
+    const overlay = document.getElementById('routeConflictModal');
+    if (!overlay) return;
+    overlay.classList.remove('show');
+    setTimeout(() => overlay.remove(), 350);
 }
 
 function handleRouteConflict(action) {
     const { byVehicle, withVehicle } = window._routeConflictData;
-    closeModal('routeConflictModal');
+    closeRouteConflict();
     executeCopyToRoute(byVehicle, withVehicle, action);
 }
 
 function executeCopyToRoute(byVehicle, withVehicle, conflictAction) {
+    showRouteProgress();
     showToast('📤 Записую в маршрут...');
-    
+
     const payload = {
         action: 'copyToRoute',
         payload: {
             passengersByVehicle: byVehicle,
-            conflictAction: conflictAction // 'add', 'archive', 'clear'
+            conflictAction: conflictAction
         }
     };
-    
+
     fetch(ROUTE_API_URL, {
         method: 'POST',
         headers: { 'Content-Type': 'text/plain' },
@@ -3716,8 +3956,8 @@ function executeCopyToRoute(byVehicle, withVehicle, conflictAction) {
     })
     .then(r => r.json())
     .then(data => {
+        hideRouteProgress();
         if (data.success) {
-            // Оновлюємо статус локально
             withVehicle.forEach(p => {
                 p.status = 'route';
                 p.mark = 'Маршрут';
@@ -3726,7 +3966,7 @@ function executeCopyToRoute(byVehicle, withVehicle, conflictAction) {
             clearSelection();
             render();
             updateAllCounts();
-            
+
             let msg = `🚀 ${data.copied} записано в маршрут`;
             if (data.archived) msg += `, 📦 ${data.archived} архівовано`;
             if (data.cleared) msg += `, 🗑️ ${data.cleared} видалено`;
@@ -3736,6 +3976,7 @@ function executeCopyToRoute(byVehicle, withVehicle, conflictAction) {
         }
     })
     .catch(err => {
+        hideRouteProgress();
         console.error('Route error:', err);
         showToast('❌ Помилка запису');
     });
