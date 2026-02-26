@@ -3221,8 +3221,13 @@ async function updateAllRoutesCount() {
         const data = await response.json();
         
         if (data.success && data.routes) {
+            // Фільтруємо: тільки аркуші маршрутів (ігноруємо логи, розсилка тощо)
+            const routeSheetNames = vehicles.map(v => v.routeSheet).filter(Boolean);
+            const validRoutes = data.routes.filter(r =>
+                routeSheetNames.some(s => s === r.name || r.name.includes(s) || s.includes(r.name))
+            );
             // Рахуємо суму всіх записів
-            const totalCount = data.routes.reduce((sum, r) => sum + (r.count || 0), 0);
+            const totalCount = validRoutes.reduce((sum, r) => sum + (r.count || 0), 0);
             
             // Оновлюємо всі лічильники "Всі маршрути"
             const countRoute = document.getElementById('countRoute');
@@ -3343,7 +3348,18 @@ async function loadAllRoutePassengers() {
         }
         
         if (routesResponse.success && routesResponse.routes && routesResponse.routes.length > 0) {
-            const routes = routesResponse.routes;
+            // Фільтруємо: тільки аркуші маршрутів (ігноруємо логи, розсилка тощо)
+            const routeSheetNames = vehicles.map(v => v.routeSheet).filter(Boolean);
+            const routes = routesResponse.routes.filter(r =>
+                routeSheetNames.some(s => s === r.name || r.name.includes(s) || s.includes(r.name))
+            );
+            if (routes.length === 0) {
+                hideLoader();
+                renderRoutePassengers();
+                updateFilterButtons();
+                showToast('📋 Маршрутів не знайдено');
+                return;
+            }
             updateLoader('Завантаження пасажирів...', `0 / ${routes.length}`);
             
             // Паралельно завантажуємо ВСІ маршрути одночасно
