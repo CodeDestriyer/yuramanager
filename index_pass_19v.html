@@ -767,6 +767,10 @@
         .lead-card.dragging { opacity: 0.5; transform: scale(1.02); }
         .lead-card.drag-over { border-top: 3px solid var(--success); margin-top: -3px; }
 
+        /* BULK OVERLAY (mobile) */
+        .bulk-overlay { display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.5); z-index: 201; backdrop-filter: blur(2px); }
+        .bulk-overlay.show { display: block; }
+
         /* BULK ACTIONS SIDEBAR - виїзна панель (червоно-бордова) */
         .bulk-actions-sidebar {
             display: none;
@@ -1101,39 +1105,46 @@
         
         /* Mobile styles */
         @media (max-width: 1099px) {
-            /* Bulk actions sidebar - СПРАВА на мобільному */
+            /* Bulk actions sidebar - ЗЛІВА на мобільному (як основне меню) */
             .bulk-actions-bar { display: none !important; }
             .bulk-actions-sidebar {
                 display: none;
                 position: fixed;
-                top: 52px;
-                right: 0;
-                left: auto;
+                top: 0;
+                left: 0;
+                right: auto;
                 bottom: 0;
-                width: 180px;
-                transform: translateX(100%);
-                box-shadow: -4px 0 20px rgba(0,0,0,0.3);
+                width: 240px;
+                transform: translateX(-100%);
+                transition: transform 0.3s ease;
+                box-shadow: 4px 0 24px rgba(0,0,0,0.35);
+                z-index: 202;
+                border-radius: 0 14px 14px 0;
             }
             .bulk-actions-sidebar.show {
                 display: flex;
                 transform: translateX(0);
             }
-            .bulk-sidebar-header { padding: 12px; }
-            .bulk-sidebar-title { font-size: 13px; }
-            .bulk-sidebar-count { font-size: 11px; padding: 3px 8px; }
-            .bulk-sidebar-actions { padding: 6px; gap: 3px; }
-            .bulk-sidebar-btn {
-                padding: 10px 12px;
-                font-size: 12px;
-                border-radius: 6px;
+            .bulk-sidebar-header {
+                padding: 16px;
+                background: rgba(0,0,0,0.15);
+                border-bottom: 1px solid rgba(255,255,255,0.1);
             }
-            .bulk-sidebar-btn .btn-icon { font-size: 14px; }
-            .bulk-sidebar-divider { margin: 6px 0; }
+            .bulk-sidebar-title { font-size: 15px; letter-spacing: 0.5px; }
+            .bulk-sidebar-count { font-size: 12px; padding: 4px 10px; }
+            .bulk-sidebar-actions { padding: 10px; gap: 4px; }
+            .bulk-sidebar-btn {
+                padding: 12px 14px;
+                font-size: 13px;
+                border-radius: 8px;
+            }
+            .bulk-sidebar-btn .btn-icon { font-size: 16px; }
+            .bulk-sidebar-divider { margin: 8px 0; }
             .bulk-sidebar-menu-btn { display: none; }
-            .bulk-sidebar-close { padding: 8px; }
-            .bulk-sidebar-close-btn { padding: 10px; font-size: 12px; }
-            .bulk-sidebar-more-toggle { padding: 8px 10px; font-size: 11px; }
-            .bulk-sidebar-secondary .bulk-sidebar-btn { padding: 8px 10px; font-size: 11px; }
+            .bulk-sidebar-close { padding: 10px; }
+            .bulk-sidebar-close-btn { padding: 12px; font-size: 13px; border-radius: 8px; }
+            .bulk-sidebar-more-toggle { padding: 10px 14px; font-size: 12px; border-radius: 8px; }
+            .bulk-sidebar-secondary .bulk-sidebar-btn { padding: 10px 14px; font-size: 12px; }
         }
 
         /* VEHICLE BADGE ON CARD */
@@ -1302,7 +1313,6 @@
             .workflow-bar { display: none; }
             .search-box { max-width: none; }
             .pc-sidebar { display: none; }
-            .bulk-actions-sidebar { width: 260px; }
             .bottom-nav { padding: 4px 6px; }
         }
 
@@ -1749,7 +1759,9 @@
     </div>
 </div>
 
-<!-- BULK ACTIONS SIDEBAR - PC версія (виїзна панель зліва) -->
+<!-- BULK OVERLAY (mobile) -->
+<div class="bulk-overlay" id="bulkOverlay" onclick="clearSelection()"></div>
+<!-- BULK ACTIONS SIDEBAR -->
 <div class="bulk-actions-sidebar" id="bulkActionsSidebar">
     <div class="bulk-sidebar-header">
         <span class="bulk-sidebar-title">Дії</span>
@@ -3047,11 +3059,13 @@ function toggleSelectAll() {
 function clearSelection() { 
     selectedIds.clear(); 
     render(); 
-    // Ховаємо sidebar тільки тут
+    // Ховаємо sidebar і overlay
     const sidebar = document.getElementById('bulkActionsSidebar');
     if (sidebar) sidebar.classList.remove('show');
     const bar = document.getElementById('bulkActionsBar');
     if (bar) bar.classList.remove('show');
+    const overlay = document.getElementById('bulkOverlay');
+    if (overlay) overlay.classList.remove('show');
     document.getElementById('bulkCount').textContent = 0;
     const sidebarCount = document.getElementById('bulkCountSidebar');
     if (sidebarCount) sidebarCount.textContent = 0;
@@ -3068,9 +3082,11 @@ function clearSelection() {
 }
 
 function switchToMenu() {
-    // Ховаємо bulk sidebar, показуємо PC sidebar
+    // Ховаємо bulk sidebar + overlay, показуємо PC sidebar
     const bulk = document.getElementById('bulkActionsSidebar');
     if (bulk) bulk.classList.remove('show');
+    const bulkOverlay = document.getElementById('bulkOverlay');
+    if (bulkOverlay) bulkOverlay.classList.remove('show');
     const pcSidebar = document.getElementById('pcSidebar');
     if (pcSidebar) {
         pcSidebar.classList.remove('collapsed-sidebar');
@@ -3095,8 +3111,11 @@ function updateBulkBar() {
     // Mobile bar - показуємо/ховаємо
     bar.classList.toggle('show', count > 0);
     
-    // PC Sidebar - тільки ПОКАЗУЄМО, не ховаємо (ховає clearSelection)
+    // Sidebar - тільки ПОКАЗУЄМО, не ховаємо (ховає clearSelection)
     if (sidebar && count > 0) sidebar.classList.add('show');
+    // Overlay (mobile)
+    const overlay = document.getElementById('bulkOverlay');
+    if (overlay && count > 0) overlay.classList.add('show');
 
     // Ховаємо collapse btn коли bulk sidebar відкритий
     const collapseBtn = document.getElementById('pcSidebarCollapseBtn');
