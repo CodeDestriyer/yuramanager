@@ -3810,7 +3810,7 @@ function deleteFromRouteOnly(uid) {
         headers: { 'Content-Type': 'text/plain' },
         body: JSON.stringify({
             action: 'deleteRoutePassenger',
-            payload: { sheetName: sheetName, passengerId: String(p.id) }
+            payload: { sheetName: sheetName, rowNum: p.rowNum }
         })
     })
     .then(r => r.json())
@@ -3851,7 +3851,7 @@ function deleteFromRouteAndTrash(uid) {
         headers: { 'Content-Type': 'text/plain' },
         body: JSON.stringify({
             action: 'deleteRoutePassenger',
-            payload: { sheetName: sheetName, passengerId: String(p.id) }
+            payload: { sheetName: sheetName, rowNum: p.rowNum }
         })
     })
     .then(r => r.json())
