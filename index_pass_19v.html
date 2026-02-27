@@ -650,17 +650,13 @@
         .card-body { flex: 1; padding: 10px; display: flex; flex-direction: column; gap: 4px; min-width: 0; overflow: hidden; }
         .card-body:hover { background: #fafbfc; }
         
-        /* Дозволяємо виділення тексту для копіювання */
-        .card-phone, .card-id, .card-name, .card-route { 
-            user-select: text; 
-            cursor: text;
+        /* Копіювання по кліку */
+        .card-phone, .card-id, .card-name, .card-route {
+            user-select: text;
         }
-        .card-phone:hover, .card-id:hover { 
-            background: rgba(26, 58, 94, 0.1); 
-            border-radius: 4px;
-            padding: 1px 4px;
-            margin: -1px -4px;
-        }
+        .copyable { cursor: pointer; border-radius: 4px; padding: 1px 4px; margin: -1px -4px; transition: background 0.15s; position: relative; }
+        .copyable:hover { background: rgba(26, 58, 94, 0.12); }
+        .copyable:active { background: rgba(26, 58, 94, 0.25); }
         
         /* Row 1: Direction, Phone, Seats, Date, Price */
         .card-top-row { display: flex; align-items: center; gap: 8px; flex-wrap: nowrap; min-height: 24px; }
@@ -2978,17 +2974,17 @@ function render() {
                     <div class="card-top-row">
                         ${orderNum}
                         <span class="card-direction" title="${p.direction === 'ua-eu' ? 'Україна → Європа' : 'Європа → Україна'}">${dirEmoji}</span>
-                        <span class="card-phone" onclick="event.stopPropagation()" onmousedown="event.stopPropagation()">${phoneDisplay}</span>
+                        <span class="card-phone copyable" onclick="event.stopPropagation();copyField(this)" onmousedown="event.stopPropagation()">${phoneDisplay}</span>
                         <span class="card-seats">👥 ${seatsDisplay}</span>
                         <span class="card-date">${dateDisplay}</span>
                         <span class="card-price">${priceDisplay}</span>
                     </div>
                     <div class="card-row2-wrap">
                         <div class="card-route-row">
-                            <span class="card-route" onclick="event.stopPropagation()" onmousedown="event.stopPropagation()">${routeFrom} <span class="card-route-arrow">→</span> ${routeTo}</span>
+                            <span class="card-route"><span class="copyable" onclick="event.stopPropagation();copyField(this)" onmousedown="event.stopPropagation()">${routeFrom}</span> <span class="card-route-arrow">→</span> <span class="copyable" onclick="event.stopPropagation();copyField(this)" onmousedown="event.stopPropagation()">${routeTo}</span></span>
                         </div>
                         <div class="card-info-row">
-                            <span class="card-id" onclick="event.stopPropagation()" onmousedown="event.stopPropagation()">${idDisplay}</span>
+                            <span class="card-id copyable" onclick="event.stopPropagation();copyField(this)" onmousedown="event.stopPropagation()">${idDisplay}</span>
                             <span class="card-name" onclick="event.stopPropagation()" onmousedown="event.stopPropagation()">${nameDisplay}</span>
                             ${p.isNew ? '<span class="new-tag">NEW</span>' : ''}
                         </div>
@@ -3756,17 +3752,17 @@ function renderRoutePassengers() {
                     </div>
                     <div class="card-body">
                         <div class="card-top-row">
-                            <span class="card-phone">${p.phone || '—'}</span>
+                            <span class="card-phone copyable" onclick="event.stopPropagation();copyField(this)">${p.phone || '—'}</span>
                             <span class="card-seats">👥 ${p.seats || 1}</span>
                             <span class="card-date">${p.date || '—'}</span>
                             ${p.payment ? `<span class="card-price">💰 ${p.payment}</span>` : ''}
                         </div>
                         <div class="card-row2-wrap">
                             <div class="card-route-row">
-                                <span class="card-route">${p.from || '?'} <span class="card-route-arrow">→</span> ${p.to || '?'}</span>
+                                <span class="card-route"><span class="copyable" onclick="event.stopPropagation();copyField(this)">${p.from || '?'}</span> <span class="card-route-arrow">→</span> <span class="copyable" onclick="event.stopPropagation();copyField(this)">${p.to || '?'}</span></span>
                             </div>
                             <div class="card-info-row">
-                                <span class="card-id">${p.id || '—'}</span>
+                                <span class="card-id copyable" onclick="event.stopPropagation();copyField(this)">${p.id || '—'}</span>
                                 <span class="card-name">${p.name || '—'}</span>
                             </div>
                         </div>
@@ -5828,6 +5824,29 @@ function saveColumnsSettings() {
 
 function closeModal(id) { document.getElementById(id).classList.remove('show'); }
 function showToast(m) { const t = document.getElementById('toast'); t.textContent = m; t.classList.add('show'); setTimeout(() => t.classList.remove('show'), 2000); }
+
+// Копіювання тексту по кліку
+function copyField(el) {
+    const text = el.textContent.trim();
+    if (!text || text === '—' || text === '?') return;
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(text).then(() => {
+            showToast('📋 ' + text);
+        }).catch(() => copyFallback(text));
+    } else {
+        copyFallback(text);
+    }
+}
+function copyFallback(text) {
+    const ta = document.createElement('textarea');
+    ta.value = text;
+    ta.style.cssText = 'position:fixed;opacity:0;left:-9999px';
+    document.body.appendChild(ta);
+    ta.select();
+    document.execCommand('copy');
+    document.body.removeChild(ta);
+    showToast('📋 ' + text);
+}
 
 // DIRECTION FILTER
 function toggleDirectionPopup() {
