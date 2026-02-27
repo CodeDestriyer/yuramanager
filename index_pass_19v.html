@@ -3801,7 +3801,7 @@ function renderRoutePassengers() {
                     </div>
                     ${p.note ? `<div class="detail-note"><span class="detail-label">📝 Примітка</span><div>${p.note}</div></div>` : ''}
                 </div>
-                <div class="card-actions" id="actions_${p._uid}" style="display:none;">
+                <div class="card-actions" id="actions_${p._uid}">
                     <button class="btn-card-action btn-call" onclick="event.stopPropagation();location.href='tel:${p.phone}'">📞 Дзвонити</button>
                     <button class="btn-card-action btn-msg" onclick="event.stopPropagation();window.open('https://console.smartsender.com/contacts?project=yura-transportation-131349','_blank')">💬 Писати</button>
                     <button class="btn-card-action btn-map" onclick="event.stopPropagation();openRouteMap('${encodeURIComponent(p.from || '')}','${encodeURIComponent(p.to || '')}')">🗺️ Карта</button>
@@ -3848,17 +3848,17 @@ function toggleRouteActions(uid) {
     const card = actions?.closest('.lead-card');
     if (!actions || !card) return;
 
-    const isOpen = actions.style.display !== 'none';
+    const isOpen = actions.classList.contains('show');
 
     // Закриваємо всі інші дії
     document.querySelectorAll('.card-actions[id^="actions_route"]').forEach(a => {
-        a.style.display = 'none';
+        a.classList.remove('show');
         a.closest('.lead-card')?.querySelector('.card-actions-toggle')?.classList.remove('open');
     });
 
     // Відкриваємо/закриваємо поточну
     if (!isOpen) {
-        actions.style.display = 'grid';
+        actions.classList.add('show');
         card.querySelector('.card-actions-toggle')?.classList.add('open');
     }
 }
